@@ -1,0 +1,357 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Harshal World - Arcade Game Hub</title>
+    
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
+    
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <!-- Particle Background Canvas -->
+    <canvas id="bgCanvas"></canvas>
+    
+    <!-- Loading Screen -->
+    <div id="loadingScreen" class="screen active">
+        <div class="loading-container">
+            <!-- Logo with glow pulse animation -->
+            <div style="text-align: center; margin-bottom: 2rem;">
+                <p style="color: var(--text-secondary); font-size: 0.9rem; margin-bottom: 1rem; text-transform: uppercase; letter-spacing: 2px;">🎮 GAMING EXPERIENCE</p>
+            </div>
+            <h1 class="game-title">HARSHAL WORLD</h1>
+            <div class="progress-bar-container">
+                <div id="progressBar" class="progress-bar"></div>
+            </div>
+            <p id="loadingQuote" class="loading-quote">Loading awesomeness...</p>
+        </div>
+    </div>
+
+    <!-- Name Entry Screen -->
+    <div id="nameEntryScreen" class="screen">
+        <div class="name-entry-card">
+            <h1>Welcome to Harshal World</h1>
+            <p class="subtitle">Enter your name to begin your adventure</p>
+            
+            <input 
+                type="text" 
+                id="playerName" 
+                class="name-input" 
+                placeholder="Your Awesome Name"
+                maxlength="20"
+            >
+            
+            <p class="avatar-label">Choose Your Avatar</p>
+            <div class="avatar-grid">
+                <div class="avatar-btn" data-avatar="🧙‍♂️">🧙‍♂️</div>
+                <div class="avatar-btn" data-avatar="🥷">🥷</div>
+                <div class="avatar-btn" data-avatar="👾">👾</div>
+                <div class="avatar-btn" data-avatar="🤖">🤖</div>
+                <div class="avatar-btn" data-avatar="🦸">🦸</div>
+                <div class="avatar-btn" data-avatar="🎭">🎭</div>
+            </div>
+            
+            <button id="playBtn" class="btn-primary">Let's Play!</button>
+        </div>
+    </div>
+
+    <!-- Experience Level Selection Screen -->
+    <div id="experienceScreen" class="screen">
+        <div class="name-entry-card">
+            <h1>What's Your Experience Level?</h1>
+            <p class="subtitle">Select your skill level for personalized tutorials</p>
+            
+            <div class="experience-grid">
+                <div class="experience-card" data-experience="beginner">
+                    <div class="experience-emoji">🌱</div>
+                    <h3>Beginner</h3>
+                    <p>New to gaming? I'll guide you through everything!</p>
+                </div>
+                <div class="experience-card" data-experience="intermediate">
+                    <div class="experience-emoji">🎮</div>
+                    <h3>Intermediate</h3>
+                    <p>You know the basics. Let's have some fun!</p>
+                </div>
+                <div class="experience-card" data-experience="pro">
+                    <div class="experience-emoji">🏆</div>
+                    <h3>Pro</h3>
+                    <p>Bring it on! No tutorials needed.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Game Hub Screen -->
+    <div id="gameHubScreen" class="screen">
+        <!-- Top Navigation -->
+        <nav class="top-nav">
+            <div class="nav-left">
+                <h2 class="logo">🎮 HARSHAL WORLD</h2>
+            </div>
+            <div class="nav-center" id="playerGreeting">
+                Welcome, 🧙‍♂️ Player!
+            </div>
+            <div class="nav-right">
+                <div class="best-score">
+                    <span>🏆 Best Score: <span id="bestScoreDisplay">0</span></span>
+                </div>
+                <!-- Dark Mode Toggle -->
+                <button id="themeSwitcher" class="dark-mode-toggle" title="Toggle Dark Mode">
+                    <span class="toggle-circle">☀️</span>
+                </button>
+                <button id="soundToggle" class="icon-btn">🔊</button>
+                <button id="settingsBtn" class="icon-btn">⚙️</button>
+            </div>
+        </nav>
+
+        <!-- Hero Section -->
+        <section class="hero-section">
+            <h2 class="hero-title">Choose Your Game</h2>
+            <p class="hero-subtitle" id="readyText">Ready to break some records?</p>
+            <div class="xp-badge">
+                <span>Level <span id="levelDisplay">1</span></span>
+                <span id="xpDisplay">0</span> XP
+            </div>
+        </section>
+
+        <!-- Games Grid -->
+        <section class="games-section">
+            <div class="games-grid">
+                <!-- Space Shooter -->
+                <div class="game-card" data-game="spaceShooter">
+                    <div class="game-thumbnail space-shooter-preview"></div>
+                    <div class="game-info">
+                        <h3>Space Shooter 🔫</h3>
+                        <p class="game-description">Shoot 'em all! Aliens won't survive you... probably.</p>
+                        <div class="game-stats">
+                            <span class="rating">⭐⭐⭐</span>
+                            <span class="difficulty easy">Easy</span>
+                        </div>
+                        <div class="best-game-score">Best: <span id="spaceshooterBest">0</span></div>
+                    </div>
+                    <button class="btn-play">PLAY</button>
+                </div>
+
+                <!-- Flappy Bird -->
+                <div class="game-card" data-game="flappyBird">
+                    <div class="game-thumbnail flappy-bird-preview"></div>
+                    <div class="game-info">
+                        <h3>Flappy Bird 🐦</h3>
+                        <p class="game-description">Just one more try... said everyone ever.</p>
+                        <div class="game-stats">
+                            <span class="rating">⭐⭐⭐</span>
+                            <span class="difficulty hard">Hard</span>
+                        </div>
+                        <div class="best-game-score">Best: <span id="flappybirdBest">0</span></div>
+                    </div>
+                    <button class="btn-play">PLAY</button>
+                </div>
+
+                <!-- Asteroid Dodge -->
+                <div class="game-card" data-game="asteroidDodge">
+                    <div class="game-thumbnail asteroid-preview"></div>
+                    <div class="game-info">
+                        <h3>Asteroid Dodge ☄️</h3>
+                        <p class="game-description">Dodge rocks in space. Easy right? ...Right?</p>
+                        <div class="game-stats">
+                            <span class="rating">⭐⭐⭐</span>
+                            <span class="difficulty medium">Medium</span>
+                        </div>
+                        <div class="best-game-score">Best: <span id="asteroidBest">0</span></div>
+                    </div>
+                    <button class="btn-play">PLAY</button>
+                </div>
+
+                <!-- Whack a Mole -->
+                <div class="game-card" data-game="whackMole">
+                    <div class="game-thumbnail mole-preview"></div>
+                    <div class="game-info">
+                        <h3>Whack a Mole 🔨</h3>
+                        <p class="game-description">Stress relief approved by doctors. Probably.</p>
+                        <div class="game-stats">
+                            <span class="rating">⭐⭐⭐</span>
+                            <span class="difficulty easy">Easy</span>
+                        </div>
+                        <div class="best-game-score">Best: <span id="molebestBest">0</span></div>
+                    </div>
+                    <button class="btn-play">PLAY</button>
+                </div>
+
+                <!-- Dino Jump Coming Soon -->
+                <div class="game-card locked">
+                    <div class="game-thumbnail dino-preview"></div>
+                    <div class="locked-overlay">
+                        <p>Coming Soon...</p>
+                        <p class="lock-message">🦕 is practicing</p>
+                    </div>
+                    <div class="game-info">
+                        <h3>Dino Jump 🦕</h3>
+                        <p class="game-description">Jump and dodge obstacles. Retro vibes!</p>
+                    </div>
+                </div>
+
+                <!-- Zombie Shooter Coming Soon -->
+                <div class="game-card locked">
+                    <div class="game-thumbnail zombie-preview"></div>
+                    <div class="locked-overlay">
+                        <p>Coming Soon...</p>
+                        <p class="lock-message">🧟 is getting ready</p>
+                    </div>
+                    <div class="game-info">
+                        <h3>Zombie Shooter 🧟</h3>
+                        <p class="game-description">Survive the undead. Brains optional.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Stats Section -->
+        <section class="stats-section">
+            <div class="leaderboard-card">
+                <h3>🏆 Leaderboard</h3>
+                <div id="leaderboard" class="leaderboard-list">
+                    <p>No scores yet. Play your first game!</p>
+                </div>
+            </div>
+            <div class="stats-card">
+                <h3>📊 My Stats</h3>
+                <div class="stats-list">
+                    <div class="stat-item">
+                        <span>Games Played</span>
+                        <span id="gamesPlayed">0</span>
+                    </div>
+                    <div class="stat-item">
+                        <span>Total XP</span>
+                        <span id="totalXP">0</span>
+                    </div>
+                    <div class="stat-item">
+                        <span>Current Level</span>
+                        <span id="currentLevel">Rookie</span>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </div>
+
+    <!-- Game Screen Container -->
+    <div id="gameScreen" class="screen">
+        <div class="game-viewport">
+            <!-- Game HUD -->
+            <div class="game-hud">
+                <div class="hud-left">
+                    <div class="lives">
+                        <span id="lives">❤️❤️❤️</span>
+                    </div>
+                </div>
+                <div class="hud-center">
+                    <div class="score-display">
+                        Score: <span id="gameScore">0</span>
+                    </div>
+                    <div id="comboCounter" class="combo-counter" style="display: none;">
+                        <span id="comboValue">2x</span> COMBO!
+                    </div>
+                </div>
+                <div class="hud-right">
+                    <button id="pauseBtn" class="pause-btn">⏸ P</button>
+                </div>
+            </div>
+
+            <!-- Canvas Container -->
+            <div class="canvas-wrapper">
+                <canvas id="gameCanvas"></canvas>
+            </div>
+
+            <!-- Tutorial Overlay -->
+            <div id="tutorialOverlay" class="tutorial-overlay" style="display: none;">
+                <div class="tutorial-content">
+                    <div class="tutorial-header">
+                        <h2 id="tutorialTitle">Game Tutorial</h2>
+                        <button id="skipTutorialBtn" class="close-btn">✕</button>
+                    </div>
+                    <div class="tutorial-body">
+                        <div id="tutorialDescription" class="tutorial-description"></div>
+                        <div id="tutorialControls" class="tutorial-controls"></div>
+                    </div>
+                    <button id="startGameBtn" class="btn-primary">Start Playing!</button>
+                </div>
+            </div>
+
+            <!-- Pause Menu -->
+            <div id="pauseMenu" class="pause-menu" style="display: none;">
+                <div class="pause-content">
+                    <h2>PAUSED</h2>
+                    <p>Press P or click to resume</p>
+                </div>
+            </div>
+
+            <!-- Game Over Screen -->
+            <div id="gameOverScreen" class="game-over-screen" style="display: none;">
+                <div class="game-over-content">
+                    <h2>GAME OVER</h2>
+                    <p id="finalScore">Final Score: 0</p>
+                    <p id="scoreMessage" class="score-message"></p>
+                    <div id="confetti" style="display: none;"></div>
+                    <div class="xp-earned">
+                        <span>+<span id="xpEarned">0</span> XP</span>
+                    </div>
+                    <div class="game-over-buttons">
+                        <button id="playAgainBtn" class="btn-primary">Play Again</button>
+                        <button id="backToHubBtn" class="btn-secondary">Back to Hub</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Settings Panel -->
+    <div id="settingsPanel" class="settings-panel">
+        <div class="settings-header">
+            <h2>Settings</h2>
+            <button id="closeSettings" class="close-btn">✕</button>
+        </div>
+        <div class="settings-content">
+            <div class="setting-item">
+                <label>Sound</label>
+                <button id="soundToggleSetting" class="toggle-btn">ON</button>
+            </div>
+            <div class="setting-item">
+                <label>Volume</label>
+                <input id="volumeSlider" type="range" min="0" max="100" value="70" class="volume-slider">
+            </div>
+            <div class="setting-item">
+                <label>Change Name</label>
+                <input type="text" id="changeName" class="name-input" maxlength="20">
+                <button id="updateNameBtn" class="btn-small">Update</button>
+            </div>
+            <div class="setting-item">
+                <label>Choose Avatar</label>
+                <div class="avatar-grid-small">
+                    <div class="avatar-btn-small" data-avatar="🧙‍♂️">🧙‍♂️</div>
+                    <div class="avatar-btn-small" data-avatar="🥷">🥷</div>
+                    <div class="avatar-btn-small" data-avatar="👾">👾</div>
+                    <div class="avatar-btn-small" data-avatar="🤖">🤖</div>
+                    <div class="avatar-btn-small" data-avatar="🦸">🦸</div>
+                    <div class="avatar-btn-small" data-avatar="🎭">🎭</div>
+                </div>
+            </div>
+            <div class="setting-item">
+                <label>Reset All Scores</label>
+                <button id="resetScoresBtn" class="btn-danger">Reset</button>
+            </div>
+            <div class="about-section">
+                <p>Built with ❤️ by Harshal</p>
+                <p class="version">Harshal World v1.0</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Settings Overlay -->
+    <div id="settingsOverlay" class="overlay" style="display: none;"></div>
+
+    <script src="script.js"></script>
+</body>
+</html>

@@ -2,7 +2,7 @@
 const STATE = {
   name: '', avatar: '', level: 'beginner', xp: 0, gamesPlayed: 0,
   bestCombo: 0, totalScore: 0, soundOn: true, volume: 0.5,
-  bestScores: {space:0,flappy:0,asteroid:0,whack:0,dino:0},
+  bestScores: {space:0,flappy:0,asteroid:0,whack:0,dino:0,zombie:0},
   leaderboard: [], emojiAvatar: '🎮', theme: 'dark'
 };
 
@@ -205,6 +205,7 @@ function saveState(){localStorage.setItem('hw_state',JSON.stringify(STATE))}
 function loadState(){
   const s=localStorage.getItem('hw_state');
   if(s){const d=JSON.parse(s);Object.assign(STATE,d)}
+  STATE.bestScores=Object.assign({space:0,flappy:0,asteroid:0,whack:0,dino:0,zombie:0},STATE.bestScores||{});
 }
 loadState();
 
@@ -308,7 +309,7 @@ document.getElementById('saveName').onclick=()=>{
 document.getElementById('resetScores').onclick=()=>{
   if(confirm('Reset all scores and XP? This cannot be undone.')){
     STATE.xp=0;STATE.gamesPlayed=0;STATE.bestCombo=0;STATE.totalScore=0;
-    STATE.bestScores={space:0,flappy:0,asteroid:0,whack:0,dino:0};STATE.leaderboard=[];
+    STATE.bestScores={space:0,flappy:0,asteroid:0,whack:0,dino:0,zombie:0};STATE.leaderboard=[];
     saveState();loadHub();SFX.hit();
   }
 };
@@ -361,7 +362,7 @@ function togglePause(){
 }
 function launchGame(game){
   currentGame=game;stopGame();
-  document.getElementById('hudGameName').textContent={space:'SPACE SHOOTER',flappy:'FLAPPY BIRD',asteroid:'ASTEROID DODGE',whack:'WHACK-A-MOLE',dino:'DINO JUMP'}[game];
+  document.getElementById('hudGameName').textContent={space:'SPACE SHOOTER',flappy:'FLAPPY BIRD',asteroid:'ASTEROID DODGE',whack:'WHACK-A-MOLE',dino:'DINO JUMP',zombie:'ZOMBIE SHOOTER'}[game];
   document.getElementById('pauseOverlay').classList.add('hidden');
   document.getElementById('gameOverOverlay').classList.add('hidden');
   document.getElementById('spaceTutorial').classList.add('hidden');
@@ -503,7 +504,7 @@ function showMobileControls(game){
   // Hide all mobile control sets
   document.querySelectorAll('.mobile-controls').forEach(el=>el.classList.remove('active'));
   // Show the correct one
-  const map={space:'mobileSpace',asteroid:'mobileAsteroid'};
+  const map={space:'mobileSpace',asteroid:'mobileAsteroid',zombie:'mobileAsteroid'};
   const id=map[game];
   if(id){const el=document.getElementById(id);if(el)el.classList.add('active')}
   // Sync slider thumb to ship position
@@ -1168,6 +1169,173 @@ GAMES.whack={
     gCtx.shadowBlur=0;gCtx.restore();
   }
 };
+
+// ============================================================
+// ZOMBIE SHOOTER
+// ============================================================
+GAMES.zombie={
+  player:null,zombies:[],bullets:[],particles:[],score:0,lives:3,frameCount:0,lastShot:0,spawnRate:0.02,
+  start(){
+    const W=gameCanvas.width,H=gameCanvas.height;
+    this.player={x:W/2,y:H/2,r:16,spd:4.5,inv:0};
+    this.zombies=[];this.bullets=[];this.particles=[];this.score=0;this.lives=3;this.frameCount=0;this.lastShot=0;this.spawnRate=0.02;
+    setScore(0);setLives(3);resetCombo();
+    gameLoop=requestAnimationFrame(()=>this.loop());
+  },
+  loop(){
+    if(!gameRunning)return;
+    if(!gamePaused)this.update();
+    this.draw();
+    gameLoop=requestAnimationFrame(()=>this.loop());
+  },
+  shoot(){
+    const now=performance.now();
+    if(now-this.lastShot<170)return;
+    this.lastShot=now;
+    const p=this.player;
+    let tx=p.x,ty=0,best=Infinity;
+    this.zombies.forEach(z=>{
+      const d=(z.x-p.x)**2+(z.y-p.y)**2;
+      if(d<best){best=d;tx=z.x;ty=z.y;}
+    });
+    const dx=tx-p.x,dy=ty-p.y,dist=Math.hypot(dx,dy)||1,speed=8;
+    this.bullets.push({x:p.x,y:p.y,vx:(dx/dist)*speed,vy:(dy/dist)*speed,r:4,life:80});
+    SFX.shoot();
+  },
+  spawnZombie(){
+    const W=gameCanvas.width,H=gameCanvas.height,edge=Math.floor(Math.random()*4),pad=28;
+    let x=0,y=0;
+    if(edge===0){x=Math.random()*W;y=-pad;}
+    if(edge===1){x=W+pad;y=Math.random()*H;}
+    if(edge===2){x=Math.random()*W;y=H+pad;}
+    if(edge===3){x=-pad;y=Math.random()*H;}
+    this.zombies.push({x,y,r:16+Math.random()*6,spd:0.9+Math.random()*0.6,hp:1});
+  },
+  hitPlayer(z){
+    const p=this.player;
+    if(p.inv>0)return;
+    this.lives--;
+    p.inv=50;
+    setLives(this.lives);
+    SFX.hit();
+    screenShake();
+    const dx=p.x-z.x,dy=p.y-z.y,d=Math.hypot(dx,dy)||1;
+    p.x+=dx/d*18;p.y+=dy/d*18;
+    if(this.lives<=0)endGame(this.score,'Zombie Shooter');
+  },
+  update(){
+    const W=gameCanvas.width,H=gameCanvas.height,p=this.player;
+    this.frameCount++;
+    this.spawnRate=Math.min(0.06,0.02+this.frameCount/8000);
+    if(Math.random()<this.spawnRate)this.spawnZombie();
+    if(keys['ArrowLeft']||keys['a']||keys['A'])p.x-=p.spd;
+    if(keys['ArrowRight']||keys['d']||keys['D'])p.x+=p.spd;
+    if(keys['ArrowUp']||keys['w']||keys['W'])p.y-=p.spd;
+    if(keys['ArrowDown']||keys['s']||keys['S'])p.y+=p.spd;
+    p.x=Math.max(p.r,Math.min(W-p.r,p.x));
+    p.y=Math.max(p.r,Math.min(H-p.r,p.y));
+    if(keys[' ']&&gameRunning&&!gamePaused)this.shoot();
+    if(p.inv>0)p.inv--;
+
+    this.bullets=this.bullets.filter(b=>{
+      b.x+=b.vx;b.y+=b.vy;b.life--;
+      return b.life>0&&b.x>-20&&b.x<W+20&&b.y>-20&&b.y<H+20;
+    });
+
+    this.zombies=this.zombies.filter(z=>{
+      const dx=p.x-z.x,dy=p.y-z.y,d=Math.hypot(dx,dy)||1;
+      z.x+=dx/d*z.spd;z.y+=dy/d*z.spd;
+      if(d<z.r+p.r-4)this.hitPlayer(z);
+      for(let i=0;i<this.bullets.length;i++){
+        const b=this.bullets[i];
+        if(Math.hypot(b.x-z.x,b.y-z.y)<z.r+b.r){
+          this.bullets.splice(i,1);
+          this.score+=Math.max(1,addCombo());
+          setScore(this.score);
+          SFX.whack();
+          for(let n=0;n<7;n++)this.particles.push({x:z.x,y:z.y,vx:(Math.random()-.5)*4,vy:(Math.random()-.5)*4,life:20,color:'rgba(239,68,68,.9)'});
+          return false;
+        }
+      }
+      return true;
+    });
+
+    this.particles=this.particles.filter(pt=>{
+      pt.x+=pt.vx;pt.y+=pt.vy;pt.life--;pt.vx*=0.96;pt.vy*=0.96;
+      return pt.life>0;
+    });
+  },
+  draw(){
+    const W=gameCanvas.width,H=gameCanvas.height,p=this.player;
+    const bg=gCtx.createLinearGradient(0,0,0,H);
+    bg.addColorStop(0,'#0e1118');bg.addColorStop(.55,'#111827');bg.addColorStop(1,'#1f2937');
+    gCtx.fillStyle=bg;gCtx.fillRect(0,0,W,H);
+
+    for(let i=0;i<22;i++){
+      const x=((i*97)+(this.frameCount*0.4))%W;
+      const y=(i*67)%H;
+      gCtx.fillStyle='rgba(255,255,255,.05)';
+      gCtx.fillRect(x,y,2,2);
+    }
+
+    this.particles.forEach(pt=>{
+      gCtx.fillStyle=pt.color;
+      gCtx.beginPath();
+      gCtx.arc(pt.x,pt.y,2.5,0,Math.PI*2);
+      gCtx.fill();
+    });
+
+    this.bullets.forEach(b=>{
+      gCtx.fillStyle='#facc15';
+      gCtx.beginPath();
+      gCtx.arc(b.x,b.y,b.r,0,Math.PI*2);
+      gCtx.fill();
+    });
+
+    this.zombies.forEach(z=>{
+      gCtx.save();
+      gCtx.shadowColor='rgba(239,68,68,.6)';
+      gCtx.shadowBlur=8;
+      gCtx.fillStyle='#22c55e';
+      gCtx.beginPath();
+      gCtx.arc(z.x,z.y,z.r,0,Math.PI*2);
+      gCtx.fill();
+      gCtx.shadowBlur=0;
+      gCtx.fillStyle='#111827';
+      gCtx.beginPath();gCtx.arc(z.x-5,z.y-3,2.2,0,Math.PI*2);gCtx.fill();
+      gCtx.beginPath();gCtx.arc(z.x+5,z.y-3,2.2,0,Math.PI*2);gCtx.fill();
+      gCtx.strokeStyle='#111827';
+      gCtx.lineWidth=1.6;
+      gCtx.beginPath();gCtx.arc(z.x,z.y+4,5,0,Math.PI);gCtx.stroke();
+      gCtx.restore();
+    });
+
+    gCtx.save();
+    const blink=p.inv>0&&Math.floor(p.inv/4)%2===0;
+    if(!blink){
+      gCtx.shadowColor='rgba(34,211,238,.8)';
+      gCtx.shadowBlur=12;
+      gCtx.fillStyle='#38bdf8';
+      gCtx.beginPath();
+      gCtx.arc(p.x,p.y,p.r,0,Math.PI*2);
+      gCtx.fill();
+      gCtx.shadowBlur=0;
+      gCtx.fillStyle='#0f172a';
+      gCtx.fillRect(p.x-3,p.y-18,6,14);
+      gCtx.fillStyle='#f1f5f9';
+      gCtx.beginPath();gCtx.arc(p.x-5,p.y-4,2.5,0,Math.PI*2);gCtx.fill();
+      gCtx.beginPath();gCtx.arc(p.x+5,p.y-4,2.5,0,Math.PI*2);gCtx.fill();
+      gCtx.fillStyle='#111827';
+      gCtx.fillRect(p.x+8,p.y-2,12,4);
+    }
+    gCtx.restore();
+
+    gCtx.fillStyle='rgba(248,250,252,.7)';
+    gCtx.font='12px Orbitron,monospace';
+    gCtx.textAlign='right';
+    gCtx.fillText('WAVE INTENSITY: '+Math.round(this.spawnRate*100),W-15,H-15);
+  }
+};
 // ============================================================
 // DINO JUMP — Neon Endless Runner
 // ============================================================
@@ -1712,6 +1880,8 @@ gameCanvas.addEventListener('touchstart',e=>{
 // Flappy click (exclude whack)
 gameCanvas.addEventListener('click',e=>{if(currentGame==='flappy')GAMES.flappy.flap()});
 gameCanvas.addEventListener('touchstart',e=>{if(currentGame==='flappy'){e.preventDefault();GAMES.flappy.flap()}},{passive:false});
+gameCanvas.addEventListener('click',e=>{if(currentGame==='zombie'&&gameRunning&&!gamePaused)GAMES.zombie.shoot()});
+gameCanvas.addEventListener('touchstart',e=>{if(currentGame==='zombie'&&gameRunning&&!gamePaused){e.preventDefault();GAMES.zombie.shoot()}},{passive:false});
 
 // Dino jump handlers
 document.addEventListener('keydown',e=>{

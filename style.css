@@ -140,6 +140,9 @@ body.light-theme .navbar{background:rgba(255,255,255,0.88)}
 .banner-whack::before{content:'\1f43b \1f43b';position:absolute;font-size:1rem;top:8px;right:10px;opacity:.35}
 .banner-whack::after{content:'\1f573\fe0f';position:absolute;font-size:1.3rem;bottom:8px;left:12px;opacity:.3}
 .banner-coming{background:linear-gradient(135deg,#1a1a1a,#2a2a2a)}
+.banner-zombie{background:linear-gradient(135deg,#120f18 0%,#1f1a2a 40%,#2f243d 70%,#120f18 100%)}
+.banner-zombie::before{content:'\1f319 \2b50';position:absolute;font-size:1rem;top:10px;right:10px;opacity:.35}
+.banner-zombie::after{content:'\1f480';position:absolute;font-size:1.4rem;bottom:8px;right:12px;opacity:.3}
 
 /* DINO JUMP STYLES */
 .banner-dino{background:linear-gradient(135deg,#0a0f0a 0%,#0d1a10 40%,#1a3322 70%,#0a0f0a 100%)}

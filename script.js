@@ -1244,12 +1244,14 @@ GAMES.zombie={
     });
 
     this.zombies=this.zombies.filter(z=>{
-      const dx=p.x-z.x,dy=p.y-z.y,d=Math.hypot(dx,dy)||1;
+      const dx=p.x-z.x,dy=p.y-z.y,d2=dx*dx+dy*dy,d=Math.sqrt(d2)||1;
       z.x+=dx/d*z.spd;z.y+=dy/d*z.spd;
-      if(d<z.r+p.r-4)this.hitPlayer(z);
+      const hitRadius=z.r+p.r-4;
+      if(d2<hitRadius*hitRadius)this.hitPlayer(z);
       for(let i=0;i<this.bullets.length;i++){
         const b=this.bullets[i];
-        if(Math.hypot(b.x-z.x,b.y-z.y)<z.r+b.r){
+        const bdx=b.x-z.x,bdy=b.y-z.y,br=z.r+b.r;
+        if((bdx*bdx+bdy*bdy)<(br*br)){
           this.bullets.splice(i,1);
           this.score+=Math.max(1,addCombo());
           setScore(this.score);

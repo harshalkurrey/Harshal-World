@@ -1174,11 +1174,11 @@ GAMES.whack={
 // ZOMBIE SHOOTER
 // ============================================================
 GAMES.zombie={
-  player:null,zombies:[],bullets:[],particles:[],score:0,lives:3,frameCount:0,lastShot:0,spawnRate:0.02,spaceHeld:false,
+  player:null,zombies:[],bullets:[],particles:[],score:0,lives:3,frameCount:0,lastShot:0,spawnRate:0.02,
   start(){
     const W=gameCanvas.width,H=gameCanvas.height;
     this.player={x:W/2,y:H/2,r:16,spd:4.5,inv:0};
-    this.zombies=[];this.bullets=[];this.particles=[];this.score=0;this.lives=3;this.frameCount=0;this.lastShot=0;this.spawnRate=0.02;this.spaceHeld=false;
+    this.zombies=[];this.bullets=[];this.particles=[];this.score=0;this.lives=3;this.frameCount=0;this.lastShot=0;this.spawnRate=0.02;
     setScore(0);setLives(3);resetCombo();
     gameLoop=requestAnimationFrame(()=>this.loop());
   },
@@ -1195,12 +1195,12 @@ GAMES.zombie={
     if(now-this.lastShot<170)return;
     this.lastShot=now;
     const p=this.player;
-    let tx=p.x,ty=0,best=Infinity;
-    this.zombies.forEach(z=>{
+    const target=this.zombies.reduce((best,z)=>{
       const d=(z.x-p.x)**2+(z.y-p.y)**2;
-      if(d<best){best=d;tx=z.x;ty=z.y;}
-    });
-    const dx=tx-p.x,dy=ty-p.y,dist=Math.hypot(dx,dy)||1,speed=8;
+      return !best||d<best.d?{z,d}:best;
+    },null)?.z;
+    if(!target)return;
+    const dx=target.x-p.x,dy=target.y-p.y,dist=Math.hypot(dx,dy)||1,speed=8;
     this.bullets.push({x:p.x,y:p.y,vx:(dx/dist)*speed,vy:(dy/dist)*speed,r:4,life:80});
     SFX.shoot();
   },
@@ -1236,8 +1236,6 @@ GAMES.zombie={
     if(keys['ArrowDown']||keys['s']||keys['S'])p.y+=p.spd;
     p.x=Math.max(p.r,Math.min(W-p.r,p.x));
     p.y=Math.max(p.r,Math.min(H-p.r,p.y));
-    if(keys[' ']&&!this.spaceHeld){this.shoot();this.spaceHeld=true}
-    if(!keys[' '])this.spaceHeld=false;
     if(p.inv>0)p.inv--;
 
     this.bullets=this.bullets.filter(b=>{
@@ -1889,6 +1887,7 @@ gameCanvas.addEventListener('touchstart',e=>{if(currentGame==='zombie'){e.preven
 // Dino jump handlers
 document.addEventListener('keydown',e=>{
   if(currentGame==='dino'&&gameRunning&&!gamePaused&&(e.key===' '||e.key==='ArrowUp')){e.preventDefault();GAMES.dino.jump();}
+  if(currentGame==='zombie'&&gameRunning&&!gamePaused&&e.key===' '&&!e.repeat){e.preventDefault();GAMES.zombie.shoot();}
 });
 function isDinoPlayTap(clientY){
   if(!isMobileViewport())return true;

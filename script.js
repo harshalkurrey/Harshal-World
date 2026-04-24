@@ -1189,6 +1189,7 @@ GAMES.zombie={
     gameLoop=requestAnimationFrame(()=>this.loop());
   },
   shoot(){
+    if(!gameRunning||gamePaused)return;
     const now=performance.now();
     if(now-this.lastShot<170)return;
     this.lastShot=now;
@@ -1209,7 +1210,7 @@ GAMES.zombie={
     if(edge===1){x=W+pad;y=Math.random()*H;}
     if(edge===2){x=Math.random()*W;y=H+pad;}
     if(edge===3){x=-pad;y=Math.random()*H;}
-    this.zombies.push({x,y,r:16+Math.random()*6,spd:0.9+Math.random()*0.6,hp:1});
+    this.zombies.push({x,y,r:16+Math.random()*6,spd:0.9+Math.random()*0.6});
   },
   hitPlayer(z){
     const p=this.player;
@@ -1234,7 +1235,7 @@ GAMES.zombie={
     if(keys['ArrowDown']||keys['s']||keys['S'])p.y+=p.spd;
     p.x=Math.max(p.r,Math.min(W-p.r,p.x));
     p.y=Math.max(p.r,Math.min(H-p.r,p.y));
-    if(keys[' ']&&gameRunning&&!gamePaused)this.shoot();
+    if(keys[' '])this.shoot();
     if(p.inv>0)p.inv--;
 
     this.bullets=this.bullets.filter(b=>{
@@ -1880,8 +1881,8 @@ gameCanvas.addEventListener('touchstart',e=>{
 // Flappy click (exclude whack)
 gameCanvas.addEventListener('click',e=>{if(currentGame==='flappy')GAMES.flappy.flap()});
 gameCanvas.addEventListener('touchstart',e=>{if(currentGame==='flappy'){e.preventDefault();GAMES.flappy.flap()}},{passive:false});
-gameCanvas.addEventListener('click',e=>{if(currentGame==='zombie'&&gameRunning&&!gamePaused)GAMES.zombie.shoot()});
-gameCanvas.addEventListener('touchstart',e=>{if(currentGame==='zombie'&&gameRunning&&!gamePaused){e.preventDefault();GAMES.zombie.shoot()}},{passive:false});
+gameCanvas.addEventListener('click',e=>{if(currentGame==='zombie')GAMES.zombie.shoot()});
+gameCanvas.addEventListener('touchstart',e=>{if(currentGame==='zombie'){e.preventDefault();GAMES.zombie.shoot()}},{passive:false});
 
 // Dino jump handlers
 document.addEventListener('keydown',e=>{

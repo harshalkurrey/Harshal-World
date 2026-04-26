@@ -369,7 +369,7 @@ body.theme-sea {
 /* 1. The Ocean Background (Coral & Fish) */
 body.theme-sea {
     /* REPLACE 'your-ocean-image.jpg' with your actual fish/coral background image */
-    background: url('deep\ sea\ bg.png') center bottom / cover no-repeat fixed, linear-gradient(to bottom, #020b1a, #082d4d);
+    background: url('assets/images/deep\ sea\ bg.png') center bottom / cover no-repeat fixed, linear-gradient(to bottom, #020b1a, #082d4d);
     background-color: var(--bg);
     overflow-x: hidden;
 }
@@ -515,7 +515,7 @@ body.theme-sunset {
         /* Dim overlay: dark purple gradient to push the city back slightly */
         linear-gradient(to bottom, rgba(11, 2, 19, 0.5), rgba(11, 2, 19, 0.8)), 
         /* REPLACE with your Synthwave Sunset background image */
-        url('sunset\ circuit\ bg.png') center bottom / cover no-repeat fixed, 
+        url('assets/images/sunset\ circuit\ bg.png') center bottom / cover no-repeat fixed, 
         #0b0213 !important;
 }
 
@@ -688,7 +688,7 @@ body.theme-pixel {
         /* Dark dimming overlay */
         linear-gradient(rgba(5, 8, 5, 0.75), rgba(5, 8, 5, 0.85)), 
         /* REPLACE with your Dungeon background image */
-        url('pixel-dungeon-bg.png') center top / cover no-repeat fixed, 
+        url('assets/images/pixel-dungeon-bg.png') center top / cover no-repeat fixed, 
         #0a0e0a !important;
         
     /* GOAL 2: Clean readable base font for all descriptions/paragraphs */

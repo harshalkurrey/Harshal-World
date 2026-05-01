@@ -474,6 +474,7 @@ function resizeCanvas(){
 function stopGame(){
   gameRunning=false;gamePaused=false;if(gameLoop)cancelAnimationFrame(gameLoop);gameLoop=null;
   gameCanvasWrap.classList.remove('dino-mobile-split');
+  dragState.active=false;dragState.game='';
   
   clearGame();
 }
@@ -587,6 +588,43 @@ document.addEventListener('keydown',e=>{
   if(e.key===' ')e.preventDefault();
 });
 document.addEventListener('keyup',e=>{keys[e.key]=false});
+
+// Touch drag movement (space/zombie)
+const dragState={active:false,game:'',x:0,y:0};
+function updateDragPosition(clientX,clientY){
+  const rect=gameCanvas.getBoundingClientRect();
+  dragState.x=clientX-rect.left;
+  dragState.y=clientY-rect.top;
+}
+function startDrag(e){
+  if(!gameRunning||gamePaused)return;
+  if(currentGame!=='space'&&currentGame!=='zombie')return;
+  const touch=e.touches?e.touches[0]:null;
+  if(!touch)return;
+  dragState.active=true;
+  dragState.game=currentGame;
+  updateDragPosition(touch.clientX,touch.clientY);
+  e.preventDefault();
+}
+function moveDrag(e){
+  if(!dragState.active)return;
+  const touch=e.touches?e.touches[0]:null;
+  if(!touch)return;
+  updateDragPosition(touch.clientX,touch.clientY);
+  e.preventDefault();
+}
+function endDrag(e){
+  if(!dragState.active)return;
+  if(e.touches&&e.touches.length>0)return;
+  dragState.active=false;
+  dragState.game='';
+}
+if(gameCanvas){
+  gameCanvas.addEventListener('touchstart',startDrag,{passive:false});
+  gameCanvas.addEventListener('touchmove',moveDrag,{passive:false});
+  gameCanvas.addEventListener('touchend',endDrag,{passive:false});
+  gameCanvas.addEventListener('touchcancel',endDrag,{passive:false});
+}
 // D-Pad buttons (asteroid)
 document.querySelectorAll('.dpad-btn').forEach(btn=>{
   const dir=btn.dataset.dir;if(!dir)return;
@@ -649,7 +687,7 @@ function showMobileControls(game){
   // Hide all mobile control sets
   document.querySelectorAll('.mobile-controls').forEach(el=>el.classList.remove('active'));
   // Show the correct one
-  const map={space:'mobileSpace',asteroid:'mobileAsteroid',zombie:'mobileZombie'};
+  const map={space:'mobileSpace',asteroid:'mobileAsteroid'};
   const id=map[game];
   if(id){const el=document.getElementById(id);if(el)el.classList.add('active')}
   // Sync slider thumb to ship position
@@ -849,10 +887,16 @@ GAMES.space={
     if(this.bombFlash>0)this.bombFlash--;
 
     if(this.freeze<=0){
-      if(keys['ArrowLeft'])p.vx-=p.acc;
-      if(keys['ArrowRight'])p.vx+=p.acc;
-      if(keys['ArrowUp'])p.vy-=p.acc;
-      if(keys['ArrowDown'])p.vy+=p.acc;
+      if(dragState.active&&dragState.game==='space'){
+        p.x=Math.max(0,Math.min(W-p.w,dragState.x-p.w/2));
+        p.y=Math.max(0,Math.min(H-p.h,dragState.y-p.h/2));
+        p.vx=0;p.vy=0;
+      }else{
+        if(keys['ArrowLeft'])p.vx-=p.acc;
+        if(keys['ArrowRight'])p.vx+=p.acc;
+        if(keys['ArrowUp'])p.vy-=p.acc;
+        if(keys['ArrowDown'])p.vy+=p.acc;
+      }
     }
     p.vx*=p.fric;p.vy*=p.fric;
     p.vx=Math.max(-p.maxSpd,Math.min(p.maxSpd,p.vx));
@@ -1036,6 +1080,17 @@ GAMES.space={
     gCtx.save();
     gCtx.translate(p.x+p.w/2,p.y+p.h/2);
     if(p.invincible>0&&Math.floor(p.invincible/5)%2===0)gCtx.globalAlpha=0.4;
+    const neonPulse=Math.sin(this.gameTime*0.12)*0.5+0.5;
+    const glowGrad=gCtx.createLinearGradient(-30,-30,30,30);
+    glowGrad.addColorStop(0,`rgba(34,211,238,${0.35+neonPulse*0.35})`);
+    glowGrad.addColorStop(1,`rgba(168,85,247,${0.35+neonPulse*0.35})`);
+    gCtx.globalCompositeOperation='lighter';
+    gCtx.shadowColor='rgba(34,211,238,0.9)';
+    gCtx.shadowBlur=24+neonPulse*18;
+    gCtx.fillStyle=glowGrad;
+    gCtx.beginPath();gCtx.moveTo(-24,-28);gCtx.lineTo(24,-28);gCtx.lineTo(32,26);gCtx.lineTo(-32,26);gCtx.closePath();gCtx.fill();
+    gCtx.shadowBlur=0;
+    gCtx.globalCompositeOperation='source-over';
     gCtx.fillStyle='#7C3AED';
     gCtx.beginPath();gCtx.moveTo(-20,-24);gCtx.lineTo(20,-24);gCtx.lineTo(28,24);gCtx.lineTo(-28,24);gCtx.closePath();gCtx.fill();
     gCtx.fillStyle='#A78BFA';
@@ -2305,43 +2360,47 @@ window.addEventListener('resize',()=>{if(gameRunning){resizeCanvas()}});
 // ZOMBIE SHOOTER — Survival Top-Down
 // ============================================================
 GAMES.zombie = {
-  score: 0, lives: 3, gameTime: 0, player: null, bullets: [], zombies: [], particles: [], lastShot: 0,
+  score: 0, lives: 3, gameTime: 0, player: null, bullets: [], zombies: [], particles: [], lastShot: 0, fireInterval: 12,
 
   start() {
     const W = gameCanvas.width, H = gameCanvas.height;
     this.score = 0; this.lives = 3; this.gameTime = 0;
     this.bullets = []; this.zombies = []; this.particles = [];
     this.player = { x: W/2, y: H/2, w: 32, h: 32, vx: 0, vy: 0, speed: 4 };
+    this.lastShot = 0;
     setScore(0); setLives(3); resetCombo();
     gameLoop = requestAnimationFrame(() => this.loop());
-    
-    this.mouseHandler = (e) => this.shoot(e);
-    gameCanvas.addEventListener('mousedown', this.mouseHandler);
-    gameCanvas.addEventListener('touchstart', this.mouseHandler, {passive: false});
   },
 
   stop() {
-    gameCanvas.removeEventListener('mousedown', this.mouseHandler);
-    gameCanvas.removeEventListener('touchstart', this.mouseHandler);
   },
 
-  shoot(e) {
+  fireAt(cx, cy) {
     if(!gameRunning || gamePaused) return;
-    e.preventDefault();
-    const W = gameCanvas.width, H = gameCanvas.height;
-    const rect = gameCanvas.getBoundingClientRect();
-    let cx, cy;
-    if(e.touches && e.touches.length > 0) {
-      cx = e.touches[0].clientX - rect.left; cy = e.touches[0].clientY - rect.top;
-    } else {
-      cx = e.clientX - rect.left; cy = e.clientY - rect.top;
-    }
-    const dx = cx - (this.player.x + 16);
-    const dy = cy - (this.player.y + 16);
+    const dx = cx - (this.player.x + this.player.w/2);
+    const dy = cy - (this.player.y + this.player.h/2);
     const dist = Math.sqrt(dx*dx + dy*dy);
     if(dist === 0) return;
-    this.bullets.push({ x: this.player.x + 16, y: this.player.y + 16, vx: (dx/dist)*10, vy: (dy/dist)*10 });
+    this.bullets.push({ x: this.player.x + this.player.w/2, y: this.player.y + this.player.h/2, vx: (dx/dist)*10, vy: (dy/dist)*10 });
     SFX.shoot();
+  },
+
+  autoFire() {
+    if(this.gameTime - this.lastShot < this.fireInterval) return;
+    if(this.zombies.length === 0) return;
+    const px = this.player.x + this.player.w/2;
+    const py = this.player.y + this.player.h/2;
+    let target = null;
+    let bestDist = Infinity;
+    this.zombies.forEach(z => {
+      const zx = z.x + z.w/2;
+      const zy = z.y + z.h/2;
+      const d = (zx - px) * (zx - px) + (zy - py) * (zy - py);
+      if(d < bestDist) { bestDist = d; target = { x: zx, y: zy }; }
+    });
+    if(!target) return;
+    this.fireAt(target.x, target.y);
+    this.lastShot = this.gameTime;
   },
 
   spawnZombie() {
@@ -2368,20 +2427,27 @@ GAMES.zombie = {
     const W = gameCanvas.width, H = gameCanvas.height, p = this.player;
     this.gameTime++;
 
-    let dx = 0, dy = 0;
-    if(keys['ArrowLeft'] || keys['a'] || keys['A']) dx = -1;
-    if(keys['ArrowRight'] || keys['d'] || keys['D']) dx = 1;
-    if(keys['ArrowUp'] || keys['w'] || keys['W']) dy = -1;
-    if(keys['ArrowDown'] || keys['s'] || keys['S']) dy = 1;
-    
-    if(dx !== 0 && dy !== 0) { dx *= 0.707; dy *= 0.707; } // normalize diagonal
-    p.x += dx * p.speed; p.y += dy * p.speed;
+    if(dragState.active&&dragState.game==='zombie'){
+      p.x=Math.max(0,Math.min(W-p.w,dragState.x-p.w/2));
+      p.y=Math.max(0,Math.min(H-p.h,dragState.y-p.h/2));
+    }else{
+      let dx = 0, dy = 0;
+      if(keys['ArrowLeft'] || keys['a'] || keys['A']) dx = -1;
+      if(keys['ArrowRight'] || keys['d'] || keys['D']) dx = 1;
+      if(keys['ArrowUp'] || keys['w'] || keys['W']) dy = -1;
+      if(keys['ArrowDown'] || keys['s'] || keys['S']) dy = 1;
+      
+      if(dx !== 0 && dy !== 0) { dx *= 0.707; dy *= 0.707; } // normalize diagonal
+      p.x += dx * p.speed; p.y += dy * p.speed;
+    }
     p.x = Math.max(0, Math.min(W - p.w, p.x));
     p.y = Math.max(0, Math.min(H - p.h, p.y));
 
     if(this.gameTime % Math.max(20, 60 - Math.floor(this.gameTime/100)) === 0) {
       this.spawnZombie();
     }
+
+    this.autoFire();
 
     this.bullets.forEach((b, i) => {
       b.x += b.vx; b.y += b.vy;

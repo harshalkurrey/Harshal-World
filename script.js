@@ -1033,7 +1033,10 @@ GAMES.space={
     gCtx.save();
     gCtx.translate(p.x+p.w/2,p.y+p.h/2);
     if(p.invincible>0&&Math.floor(p.invincible/5)%2===0)gCtx.globalAlpha=0.4;
-    const flowPulse=Math.sin(this.gameTime*0.12)*0.5+0.5;
+    const flowFrequency=0.12;
+    const flowAmplitude=0.5;
+    const flowOffset=0.5;
+    const flowPulse=Math.sin(this.gameTime*flowFrequency)*flowAmplitude+flowOffset;
     const bodyGrad=gCtx.createLinearGradient(-30,-30,30,30);
     bodyGrad.addColorStop(0,`rgba(34,211,238,${0.9})`);
     bodyGrad.addColorStop(1,`rgba(168,85,247,${0.95})`);
@@ -2311,8 +2314,9 @@ window.addEventListener('resize',()=>{if(gameRunning){resizeCanvas()}});
 // ============================================================
 // ZOMBIE SHOOTER — Survival Top-Down
 // ============================================================
+const ZOMBIE_AUTO_FIRE_RATE = 12;
 GAMES.zombie = {
-  score: 0, lives: 3, gameTime: 0, player: null, bullets: [], zombies: [], particles: [], lastShot: 0, autoFireRate: 12,
+  score: 0, lives: 3, gameTime: 0, player: null, bullets: [], zombies: [], particles: [], lastShot: 0, autoFireRate: ZOMBIE_AUTO_FIRE_RATE,
 
   start() {
     const W = gameCanvas.width, H = gameCanvas.height;
@@ -2370,7 +2374,7 @@ GAMES.zombie = {
     if(keys['ArrowUp'] || keys['w'] || keys['W']) dy = -1;
     if(keys['ArrowDown'] || keys['s'] || keys['S']) dy = 1;
     
-    if(dx !== 0 && dy !== 0) { dx *= 0.707; dy *= 0.707; } // normalize diagonal
+    if(dx !== 0 && dy !== 0) { dx *= Math.SQRT1_2; dy *= Math.SQRT1_2; } // normalize diagonal
     p.x += dx * p.speed; p.y += dy * p.speed;
     p.x = Math.max(0, Math.min(W - p.w, p.x));
     p.y = Math.max(0, Math.min(H - p.h, p.y));

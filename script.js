@@ -474,7 +474,7 @@ function resizeCanvas(){
 function stopGame(){
   gameRunning=false;gamePaused=false;if(gameLoop)cancelAnimationFrame(gameLoop);gameLoop=null;
   gameCanvasWrap.classList.remove('dino-mobile-split');
-  
+  if(currentGame&&GAMES[currentGame]&&typeof GAMES[currentGame].stop==='function')GAMES[currentGame].stop();
   clearGame();
 }
 function togglePause(){
@@ -728,7 +728,13 @@ GAMES.space={
     this.player={x:W/2,y:H-80,w:64,h:64,vx:0,vy:0,acc:1.2,fric:0.88,maxSpd:12,invincible:0,xp:0};
     this.stars=Array.from({length:80},()=>({x:Math.random()*W,y:Math.random()*H,s:Math.random()*2+.5,v:Math.random()*.8+.2}));
     setScore(0);updateXPDisplay(0);resetCombo();
+    this.clickHandler=()=>{if(gameRunning&&!gamePaused&&this.freeze<=0)this.fireBullets()};
+    gameCanvas.addEventListener('mousedown',this.clickHandler);
     gameLoop=requestAnimationFrame(()=>this.loop());
+  },
+
+  stop(){
+    if(this.clickHandler){gameCanvas.removeEventListener('mousedown',this.clickHandler);this.clickHandler=null;}
   },
 
   loop(){
@@ -849,10 +855,10 @@ GAMES.space={
     if(this.bombFlash>0)this.bombFlash--;
 
     if(this.freeze<=0){
-      if(keys['ArrowLeft'])p.vx-=p.acc;
-      if(keys['ArrowRight'])p.vx+=p.acc;
-      if(keys['ArrowUp'])p.vy-=p.acc;
-      if(keys['ArrowDown'])p.vy+=p.acc;
+      if(keys['ArrowLeft']||keys['a']||keys['A'])p.vx-=p.acc;
+      if(keys['ArrowRight']||keys['d']||keys['D'])p.vx+=p.acc;
+      if(keys['ArrowUp']||keys['w']||keys['W'])p.vy-=p.acc;
+      if(keys['ArrowDown']||keys['s']||keys['S'])p.vy+=p.acc;
     }
     p.vx*=p.fric;p.vy*=p.fric;
     p.vx=Math.max(-p.maxSpd,Math.min(p.maxSpd,p.vx));

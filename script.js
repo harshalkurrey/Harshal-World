@@ -2367,7 +2367,7 @@ GAMES.zombie = {
     this.score = 0; this.lives = 3; this.gameTime = 0;
     this.bullets = []; this.zombies = []; this.particles = [];
     this.player = { x: W/2, y: H/2, w: 32, h: 32, vx: 0, vy: 0, speed: 4 };
-    this.lastShot = 0;
+    this.lastShot = -this.fireInterval;
     setScore(0); setLives(3); resetCombo();
     gameLoop = requestAnimationFrame(() => this.loop());
   },

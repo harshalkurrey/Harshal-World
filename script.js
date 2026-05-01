@@ -594,14 +594,6 @@ document.querySelectorAll('.dpad-btn').forEach(btn=>{
   btn.addEventListener('touchend',e=>{e.preventDefault();keys['Arrow'+dir.charAt(0).toUpperCase()+dir.slice(1)]=false;btn.classList.remove('pressed')},{passive:false});
 });
 
-// Space Shooter mobile: left/right buttons
-['spaceLeft','spaceRight'].forEach(id=>{
-  const btn=document.getElementById(id);if(!btn)return;
-  const dir=btn.dataset.dir;
-  btn.addEventListener('touchstart',e=>{e.preventDefault();keys['Arrow'+dir.charAt(0).toUpperCase()+dir.slice(1)]=true;btn.classList.add('pressed')},{passive:false});
-  btn.addEventListener('touchend',e=>{e.preventDefault();keys['Arrow'+dir.charAt(0).toUpperCase()+dir.slice(1)]=false;btn.classList.remove('pressed')},{passive:false});
-});
-
 // Space Shooter bomb button
 document.getElementById('spaceBomb').addEventListener('touchstart',e=>{e.preventDefault();keys['b']=true;document.getElementById('spaceBomb').classList.add('pressed')},{passive:false});
 document.getElementById('spaceBomb').addEventListener('touchend',e=>{e.preventDefault();keys['b']=false;document.getElementById('spaceBomb').classList.remove('pressed')},{passive:false});
@@ -610,38 +602,48 @@ document.getElementById('spaceBomb').addEventListener('touchend',e=>{e.preventDe
 document.getElementById('fireBtn').addEventListener('touchstart',e=>{e.preventDefault();keys[' ']=true});
 document.getElementById('fireBtn').addEventListener('touchend',e=>{e.preventDefault();keys[' ']=false});
 
-// ===== SPACE SLIDER BAR =====
+// ===== SPACE/ZOMBIE DRAG MOVE (MOBILE) =====
 (function(){
-  const track=document.getElementById('spaceSliderTrack');
-  const thumb=document.getElementById('spaceSliderThumb');
-  if(!track||!thumb)return;
   let dragging=false;
-  function getSliderPos(clientX){
-    const rect=track.getBoundingClientRect();
-    const pct=Math.max(0,Math.min(1,(clientX-rect.left)/rect.width));
-    return pct;
+  let dragGame='';
+  function setDragPosition(clientX,clientY){
+    if(!gameRunning||gamePaused)return;
+    if(currentGame!==dragGame)return;
+    const game=GAMES[dragGame];
+    const player=game?.player;
+    if(!player)return;
+    const rect=gameCanvas.getBoundingClientRect();
+    const scaleX=gameCanvas.width/rect.width;
+    const scaleY=gameCanvas.height/rect.height;
+    const x=(clientX-rect.left)*scaleX;
+    const y=(clientY-rect.top)*scaleY;
+    const W=gameCanvas.width,H=gameCanvas.height;
+    player.x=Math.max(0,Math.min(W-player.w,x-player.w/2));
+    player.y=Math.max(0,Math.min(H-player.h,y-player.h/2));
+    if('vx' in player)player.vx=0;
+    if('vy' in player)player.vy=0;
   }
-  function moveThumb(pct){
-    thumb.style.left=(pct*100)+'%';
-    // Move spaceship proportionally
-    if(currentGame==='space'&&GAMES.space.player&&gameRunning){
-      const W=gameCanvas.width;
-      GAMES.space.player.x=pct*(W-GAMES.space.player.w);
-    }
-  }
-  track.addEventListener('touchstart',e=>{
-    e.preventDefault();dragging=true;
-    const pct=getSliderPos(e.touches[0].clientX);moveThumb(pct);
+  gameCanvas.addEventListener('touchstart',e=>{
+    if(!gameRunning||gamePaused)return;
+    if(currentGame!=='space'&&currentGame!=='zombie')return;
+    const t=e.touches[0];if(!t)return;
+    dragging=true;dragGame=currentGame;
+    e.preventDefault();
+    setDragPosition(t.clientX,t.clientY);
   },{passive:false});
-  track.addEventListener('touchmove',e=>{
-    e.preventDefault();if(!dragging)return;
-    const pct=getSliderPos(e.touches[0].clientX);moveThumb(pct);
+  gameCanvas.addEventListener('touchmove',e=>{
+    if(!dragging)return;
+    if(currentGame!==dragGame)return;
+    const t=e.touches[0];if(!t)return;
+    e.preventDefault();
+    setDragPosition(t.clientX,t.clientY);
   },{passive:false});
-  track.addEventListener('touchend',e=>{e.preventDefault();dragging=false},{passive:false});
-  // Mouse fallback
-  track.addEventListener('mousedown',e=>{dragging=true;moveThumb(getSliderPos(e.clientX))});
-  window.addEventListener('mousemove',e=>{if(dragging)moveThumb(getSliderPos(e.clientX))});
-  window.addEventListener('mouseup',()=>{dragging=false});
+  ['touchend','touchcancel'].forEach(evt=>{
+    gameCanvas.addEventListener(evt,e=>{
+      if(currentGame===dragGame)e.preventDefault();
+      dragging=false;dragGame='';
+    },{passive:false});
+  });
 })();
 
 // ===== SHOW/HIDE MOBILE CONTROLS PER GAME =====
@@ -652,11 +654,6 @@ function showMobileControls(game){
   const map={space:'mobileSpace',asteroid:'mobileAsteroid',zombie:'mobileZombie'};
   const id=map[game];
   if(id){const el=document.getElementById(id);if(el)el.classList.add('active')}
-  // Sync slider thumb to ship position
-  if(game==='space'){
-    const thumb=document.getElementById('spaceSliderThumb');
-    if(thumb)thumb.style.left='50%';
-  }
 }
 
 // ===== COMBO SYSTEM =====
@@ -1036,14 +1033,24 @@ GAMES.space={
     gCtx.save();
     gCtx.translate(p.x+p.w/2,p.y+p.h/2);
     if(p.invincible>0&&Math.floor(p.invincible/5)%2===0)gCtx.globalAlpha=0.4;
-    gCtx.fillStyle='#7C3AED';
+    const flowPulse=Math.sin(this.gameTime*0.12)*0.5+0.5;
+    const bodyGrad=gCtx.createLinearGradient(-30,-30,30,30);
+    bodyGrad.addColorStop(0,`rgba(34,211,238,${0.9})`);
+    bodyGrad.addColorStop(1,`rgba(168,85,247,${0.95})`);
+    gCtx.shadowColor=`rgba(34,211,238,${0.6+flowPulse*0.3})`;
+    gCtx.shadowBlur=18+flowPulse*12;
+    gCtx.fillStyle=bodyGrad;
     gCtx.beginPath();gCtx.moveTo(-20,-24);gCtx.lineTo(20,-24);gCtx.lineTo(28,24);gCtx.lineTo(-28,24);gCtx.closePath();gCtx.fill();
-    gCtx.fillStyle='#A78BFA';
+    gCtx.shadowBlur=0;
+    gCtx.fillStyle='rgba(168,85,247,0.95)';
     gCtx.beginPath();gCtx.moveTo(-28,-10);gCtx.lineTo(-38,15);gCtx.lineTo(-28,15);gCtx.closePath();gCtx.fill();
     gCtx.beginPath();gCtx.moveTo(28,-10);gCtx.lineTo(38,15);gCtx.lineTo(28,15);gCtx.closePath();gCtx.fill();
-    gCtx.fillStyle='#FFD700';gCtx.beginPath();gCtx.arc(0,-15,6,0,Math.PI*2);gCtx.fill();
-    gCtx.shadowColor='#7C3AED';gCtx.shadowBlur=15;
-    gCtx.fillStyle='rgba(124,58,237,0.6)';gCtx.fillRect(-12,20,24,12);gCtx.shadowBlur=0;
+    gCtx.fillStyle='#FDE047';gCtx.beginPath();gCtx.arc(0,-15,6,0,Math.PI*2);gCtx.fill();
+    const trailGrad=gCtx.createLinearGradient(0,22,0,60);
+    trailGrad.addColorStop(0,`rgba(34,211,238,${0.7+flowPulse*0.2})`);
+    trailGrad.addColorStop(1,'rgba(34,211,238,0)');
+    gCtx.fillStyle=trailGrad;
+    gCtx.fillRect(-8,22,16,28);
     const fi=Math.random()*0.5+0.5;
     gCtx.fillStyle=`rgba(255,107,53,${fi})`;
     gCtx.beginPath();gCtx.moveTo(-10,32);gCtx.lineTo(-6,42);gCtx.lineTo(0,38);gCtx.lineTo(6,42);gCtx.lineTo(10,32);gCtx.closePath();gCtx.fill();
@@ -2305,37 +2312,26 @@ window.addEventListener('resize',()=>{if(gameRunning){resizeCanvas()}});
 // ZOMBIE SHOOTER — Survival Top-Down
 // ============================================================
 GAMES.zombie = {
-  score: 0, lives: 3, gameTime: 0, player: null, bullets: [], zombies: [], particles: [], lastShot: 0,
+  score: 0, lives: 3, gameTime: 0, player: null, bullets: [], zombies: [], particles: [], lastShot: 0, autoFireRate: 12,
 
   start() {
     const W = gameCanvas.width, H = gameCanvas.height;
     this.score = 0; this.lives = 3; this.gameTime = 0;
-    this.bullets = []; this.zombies = []; this.particles = [];
+    this.bullets = []; this.zombies = []; this.particles = []; this.lastShot = 0;
     this.player = { x: W/2, y: H/2, w: 32, h: 32, vx: 0, vy: 0, speed: 4 };
     setScore(0); setLives(3); resetCombo();
     gameLoop = requestAnimationFrame(() => this.loop());
-    
-    this.mouseHandler = (e) => this.shoot(e);
-    gameCanvas.addEventListener('mousedown', this.mouseHandler);
-    gameCanvas.addEventListener('touchstart', this.mouseHandler, {passive: false});
   },
 
   stop() {
-    gameCanvas.removeEventListener('mousedown', this.mouseHandler);
-    gameCanvas.removeEventListener('touchstart', this.mouseHandler);
+    if(this.mouseHandler){
+      gameCanvas.removeEventListener('mousedown', this.mouseHandler);
+      gameCanvas.removeEventListener('touchstart', this.mouseHandler);
+      this.mouseHandler = null;
+    }
   },
 
-  shoot(e) {
-    if(!gameRunning || gamePaused) return;
-    e.preventDefault();
-    const W = gameCanvas.width, H = gameCanvas.height;
-    const rect = gameCanvas.getBoundingClientRect();
-    let cx, cy;
-    if(e.touches && e.touches.length > 0) {
-      cx = e.touches[0].clientX - rect.left; cy = e.touches[0].clientY - rect.top;
-    } else {
-      cx = e.clientX - rect.left; cy = e.clientY - rect.top;
-    }
+  fireAt(cx, cy) {
     const dx = cx - (this.player.x + 16);
     const dy = cy - (this.player.y + 16);
     const dist = Math.sqrt(dx*dx + dy*dy);
@@ -2378,6 +2374,23 @@ GAMES.zombie = {
     p.x += dx * p.speed; p.y += dy * p.speed;
     p.x = Math.max(0, Math.min(W - p.w, p.x));
     p.y = Math.max(0, Math.min(H - p.h, p.y));
+
+    if(this.gameTime - this.lastShot >= this.autoFireRate && this.zombies.length > 0) {
+      let target = null;
+      let bestDist = Infinity;
+      const px = p.x + p.w / 2;
+      const py = p.y + p.h / 2;
+      this.zombies.forEach(z => {
+        const zx = z.x + z.w / 2;
+        const zy = z.y + z.h / 2;
+        const dist = (zx - px) * (zx - px) + (zy - py) * (zy - py);
+        if(dist < bestDist) { bestDist = dist; target = { x: zx, y: zy }; }
+      });
+      if(target) {
+        this.fireAt(target.x, target.y);
+        this.lastShot = this.gameTime;
+      }
+    }
 
     if(this.gameTime % Math.max(20, 60 - Math.floor(this.gameTime/100)) === 0) {
       this.spawnZombie();

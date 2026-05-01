@@ -181,7 +181,7 @@
         <div class="game-banner banner-zombie">🧟<span style="position:absolute;font-size:1rem;bottom:8px;left:10px;opacity:.5">🩸🔫🧟</span></div>
         <div class="game-card-info">
           <div class="game-name">ZOMBIE SHOOTER</div>
-          <div class="game-desc">Survive the apocalypse. WASD to move, Click to shoot!</div>
+          <div class="game-desc">Survive the apocalypse. WASD/Arrows to move, auto-fire active!</div>
           <div class="game-best">BEST: <span class="best-score" data-game="zombie">0</span></div>
           <button class="play-now-btn">▶ PLAY NOW</button>
         </div>
@@ -290,15 +290,9 @@
 
     <!-- Mobile Controls: Space Shooter -->
     <div class="mobile-controls" id="mobileSpace">
-      <div class="space-slider-wrap" id="spaceSliderWrap">
-        <div class="space-slider-track" id="spaceSliderTrack">
-          <div class="space-slider-thumb" id="spaceSliderThumb">🚀</div>
-        </div>
-      </div>
+      <div class="space-drag-hint">HOLD &amp; DRAG TO MOVE</div>
       <div class="space-bottom-row">
-        <div class="mobile-btn mobile-btn-lg" id="spaceLeft" data-dir="left">◀</div>
         <div class="mobile-btn mobile-btn-bomb" id="spaceBomb">💣</div>
-        <div class="mobile-btn mobile-btn-lg" id="spaceRight" data-dir="right">▶</div>
       </div>
       <div class="fire-btn" id="fireBtn">🔥</div>
     </div>
@@ -316,15 +310,9 @@
 
     <!-- Mobile Controls: Zombie Shooter -->
     <div class="mobile-controls" id="mobileZombie">
-      <div class="dpad">
-        <div class="dpad-btn dpad-up" data-dir="up">▲</div>
-        <div class="dpad-btn dpad-left" data-dir="left">◀</div>
-        <div class="dpad-btn dpad-center">●</div>
-        <div class="dpad-btn dpad-right" data-dir="right">▶</div>
-        <div class="dpad-btn dpad-down" data-dir="down">▼</div>
-      </div>
-      <div style="position:absolute; right:20px; bottom:20px; color:rgba(255,255,255,0.5); font-size:0.8rem; text-align:right; pointer-events:none;">
-        TAP ANYWHERE<br>TO SHOOT
+      <div class="mobile-hint">
+        <div>DRAG TO MOVE</div>
+        <div>AUTO-FIRE ACTIVE</div>
       </div>
     </div>
 
@@ -344,6 +332,10 @@
         <div class="tutorial-key">
           <div class="tutorial-key-icon">⎵</div>
           <div class="tutorial-key-label"><strong>Fire</strong>Space bar to shoot</div>
+        </div>
+        <div class="tutorial-key">
+          <div class="tutorial-key-icon">👆</div>
+          <div class="tutorial-key-label"><strong>Move</strong>Hold &amp; drag on mobile</div>
         </div>
         <div class="tutorial-key">
           <div class="tutorial-key-icon">🖱</div>
@@ -425,8 +417,12 @@
           <div class="tutorial-key-label"><strong>Move</strong>WASD or Arrows to move</div>
         </div>
         <div class="tutorial-key">
-          <div class="tutorial-key-icon">🖱</div>
-          <div class="tutorial-key-label"><strong>Shoot</strong>Click/Tap to aim and shoot</div>
+          <div class="tutorial-key-icon">👆</div>
+          <div class="tutorial-key-label"><strong>Move</strong>Hold &amp; drag on mobile</div>
+        </div>
+        <div class="tutorial-key">
+          <div class="tutorial-key-icon">⚡</div>
+          <div class="tutorial-key-label"><strong>Fire</strong>Auto-fire is always on</div>
         </div>
         <div class="tutorial-key">
           <div class="tutorial-key-icon">⏸</div>

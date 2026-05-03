@@ -179,7 +179,7 @@ function drawParticles(){
     if(p.x<0||p.x>pbCanvas.width)p.vx*=-1;
     if(p.y<0||p.y>pbCanvas.height)p.vy*=-1;
     pbCtx.beginPath();pbCtx.arc(p.x,p.y,p.r,0,Math.PI*2);
-    pbCtx.fillStyle=`rgba(124,58,237,${p.alpha})`;pbCtx.fill();
+    pbCtx.fillStyle=`rgba(34,211,238,${p.alpha})`;pbCtx.fill();
   });
   for(let i=0;i<particles.length;i++){
     for(let j=i+1;j<particles.length;j++){
@@ -188,7 +188,7 @@ function drawParticles(){
       if(d<120){
         pbCtx.beginPath();pbCtx.moveTo(particles[i].x,particles[i].y);
         pbCtx.lineTo(particles[j].x,particles[j].y);
-        pbCtx.strokeStyle=`rgba(124,58,237,${.15*(1-d/120)})`;
+        pbCtx.strokeStyle=`rgba(34,211,238,${.12*(1-d/120)})`;
         pbCtx.lineWidth=.5;pbCtx.stroke();
       }
     }

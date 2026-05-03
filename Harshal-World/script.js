@@ -2212,7 +2212,7 @@ window.addEventListener('load',()=>{
   if(STATE.name){
     loadHub();showScreen('hub-screen');
   }else{
-    runLoading();
+    showScreen('name-screen');
   }
 });
 window.addEventListener('resize',()=>{if(gameRunning)resizeCanvas()});

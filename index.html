@@ -5,10 +5,10 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Harshal World — Arcade Hub</title>
 <link rel="icon" type="image/png" href="ChatGPT Image Mar 3, 2026, 04_23_04 PM.png">
-<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Nunito:wght@300;400;600;700;800&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Exo+2:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="style.css">
 <script src="https://cdn.jsdelivr.net/npm/twemoji@14.0.2/dist/twemoji.min.js" crossorigin="anonymous"></script>
-</head>
+</head>git 
 <body>
 
 <canvas id="particle-bg"></canvas>
@@ -88,9 +88,7 @@
     <div class="nav-greeting">Welcome, <span id="navName">Player</span></div>
     <div class="nav-best">🏆 <span id="navBest">0</span></div>
     <button class="nav-btn" id="soundToggleNav" title="Toggle Sound">🔊</button>
-    <button class="nav-btn" id="themeToggleNav" title="Cycle Theme">🌌 <span>Default</span></button>
     <button class="nav-btn" id="settingsBtn">⚙️</button>
-    <button class="btn" id="openWheelBtn" style="padding: 0 1.2rem; height: 34px; font-size: 0.8rem; display: flex; align-items: center; justify-content: center; white-space: nowrap; margin-left: 0.5rem;">SPIN TO CHOOSE!</button>
   </nav>
   <div class="hub-content">
     <!-- Hero -->
@@ -109,11 +107,28 @@
         <div class="stat-chip"><strong id="statGames">0</strong>Games Played</div>
         <div class="stat-chip"><strong id="statCombo">0</strong>Best Combo</div>
       </div>
+      <div class="hero-meta-cards">
+        <div class="meta-card"><span>🔥 Streak</span><strong id="dailyStreak">0</strong></div>
+        <div class="meta-card"><span>🎯 Challenge Bonus</span><strong id="dailyBonus">+0 XP</strong></div>
+        <div class="meta-card"><span>🪙 Coins</span><strong id="coinBalance">0</strong></div>
+      </div>
     </div>
-    <div class="hub-controls">
-      <div class="search-wrapper">
+    <div style="background:linear-gradient(135deg,rgba(236,72,153,0.15),rgba(124,58,237,0.15));border:1px solid rgba(236,72,153,0.3);border-radius:16px;padding:1.2rem;margin-bottom:1.5rem;display:flex;align-items:flex-start;gap:1rem;flex-wrap:wrap">
+      <div style="font-size:1.8rem">📌</div>
+      <div style="flex:1;min-width:220px">
+        <div style="font-family:Orbitron,sans-serif;font-size:0.85rem;color:#EC4899;font-weight:700;margin-bottom:0.3rem">Daily Challenge</div>
+        <div id="dailyChallenge" style="font-size:0.95rem;color:var(--text2);line-height:1.4">Complete today's challenge to earn bonus XP!</div>
+        <div class="challenge-action-row">
+          <span id="challengeStatus" class="challenge-status">STATUS: In progress</span>
+          <button class="challenge-btn" id="completeChallengeBtn">Mark complete</button>
+          <button class="challenge-btn hidden" id="claimRewardBtn">Claim reward</button>
+        </div>
+      </div>
+    </div>
+    <div class="hub-controls unimax-search-card">
+      <div class="search-input-wrap">
         <span class="search-icon">🔍</span>
-        <input type="text" id="gameSearch" placeholder="Search games (Press '/' to focus)..." autocomplete="off">
+        <input type="text" id="gameSearch" placeholder="Search Unimax games or genres..." autocomplete="off">
       </div>
       <div class="filter-pills" id="filterPills">
         <button class="filter-btn active" data-filter="all">All</button>
@@ -123,73 +138,22 @@
       </div>
     </div>
 
-    <div id="noResults" class="hidden">
-      <p>No games found matching your search!</p>
-    </div>
-
 
     <!-- Games Grid -->
     <div class="section-title">ARCADE GAMES</div>
-    <div class="games-grid" id="gamesGrid">
-      <div class="game-card" data-game="space" data-category="action">
-        <div class="game-banner banner-space">🚀<span style="position:absolute;font-size:1rem;bottom:8px;left:10px;opacity:.5">⚡💥🔱</span></div>
-        <div class="game-card-info">
-          <div class="game-name">SPACE SHOOTER</div>
-          <div class="game-desc">Power-ups: 🔱 Triple Shot, 💥 Big Bullet, 💣 Bomb! Press B for Bomb.</div>
-          <div class="game-best">BEST: <span class="best-score" data-game="space">0</span></div>
-        </div>
-        <button class="play-btn">▶ Play Now</button>
+    <div id="gamesGrid">
+      <div class="game-section">
+        <div class="group-title group-title-popular" id="popularTitle">Popular</div>
+        <div class="games-grid" id="popularGames"></div>
       </div>
-      <div class="game-card" data-game="flappy" data-category="arcade">
-        <div class="game-banner banner-flappy">🐦<span style="position:absolute;font-size:1rem;bottom:8px;left:10px;opacity:.5">🌿🌤️💨</span></div>
-        <div class="game-card-info">
-          <div class="game-name">FLAPPY BIRD</div>
-          <div class="game-desc">Classic flappy action. Space or tap to flap.</div>
-          <div class="game-best">BEST: <span class="best-score" data-game="flappy">0</span></div>
-        </div>
-        <button class="play-btn">▶ Play Now</button>
+      <div class="game-section">
+        <div class="group-title group-title-trending">Trending / Most Viewed</div>
+        <div class="games-grid" id="trendingGames"></div>
       </div>
-      <div class="game-card" data-game="asteroid" data-category="action">
-        <div class="game-banner banner-asteroid">☄️<span style="position:absolute;font-size:1rem;bottom:8px;left:10px;opacity:.5">🌌🪐✨</span></div>
-        <div class="game-card-info">
-          <div class="game-name">ASTEROID DODGE</div>
-          <div class="game-desc">Dodge spinning rocks. Speed increases over time.</div>
-          <div class="game-best">BEST: <span class="best-score" data-game="asteroid">0</span></div>
-        </div>
-        <button class="play-btn">▶ Play Now</button>
+      <div class="game-section">
+        <div class="group-title" id="allGamesTitle">All Games</div>
+        <div class="games-grid" id="allGamesGrid"></div>
       </div>
-      <div class="game-card" data-game="whack" data-category="arcade">
-        <div class="game-banner banner-whack">🐻<span style="position:absolute;font-size:1rem;bottom:8px;left:10px;opacity:.5">🔨💥⭐</span></div>
-        <div class="game-card-info">
-          <div class="game-name">WHACK A BEAR</div>
-          <div class="game-desc">60 seconds. Click those bears before they hide!</div>
-          <div class="game-best">BEST: <span class="best-score" data-game="whack">0</span></div>
-        </div>
-        <button class="play-btn">▶ Play Now</button>
-      </div>
-      <div class="game-card" data-game="dino" data-category="dino">
-        <div class="game-banner banner-dino">🦕<span style="position:absolute;font-size:1rem;bottom:8px;left:10px;opacity:.5">🌵🦅💨</span></div>
-        <div class="game-card-info">
-          <div class="game-name">DINO JUMP</div>
-          <div class="game-desc">Endless runner with double jump. Dodge cacti & pterodactyls!</div>
-          <div class="game-best">BEST: <span class="best-score" data-game="dino">0</span></div>
-        </div>
-        <button class="play-btn">▶ Play Now</button>
-      </div>
-      <div class="game-card" data-game="zombie" data-category="action">
-        <div class="game-banner banner-zombie">🧟<span style="position:absolute;font-size:1rem;bottom:8px;left:10px;opacity:.5">🩸🔫🧟</span></div>
-        <div class="game-card-info">
-          <div class="game-name">ZOMBIE SHOOTER</div>
-          <div class="game-desc">Survive the apocalypse. WASD to move, Click to shoot!</div>
-          <div class="game-best">BEST: <span class="best-score" data-game="zombie">0</span></div>
-        </div>
-      </div>
-    </div>
-
-    <div class="spinner-section">
-      <button class="btn spinner-trigger" id="openSpinner">
-        <span>🎰</span> SPIN TO PLAY
-      </button>
     </div>
 
     <!-- Bottom row -->
@@ -415,52 +379,8 @@
   </div>
 </div>
 
-<!-- SPINNER OVERLAY -->
-<div class="spinner-overlay hidden" id="spinnerOverlay">
-  <div class="spinner-container">
-    <button class="close-btn spinner-close" id="closeSpinner">✕</button>
-    <div class="spinner-wheel-wrap">
-      <canvas id="spinnerCanvas" width="380" height="380"></canvas>
-      <div class="spinner-pointer">▼</div>
-    </div>
-    <button class="btn spin-btn" id="spinBtn">🎲 SPIN</button>
-  </div>
-</div>
-
-<!-- SPINNER RESULT MODAL -->
-<div class="spinner-result-overlay hidden" id="spinnerResultOverlay">
-  <div class="spinner-result-card">
-    <div class="spinner-result-emoji" id="spinnerResultEmoji">🎮</div>
-    <div class="spinner-result-title" id="spinnerResultTitle">SPACE SHOOTER</div>
-    <div class="spinner-result-desc" id="spinnerResultDesc">Ready to play?</div>
-    <div class="spinner-result-btns">
-      <button class="btn" id="playSelectedGame">▶ PLAY NOW</button>
-      <button class="btn btn-secondary" id="spinAgainBtn">🎰 SPIN AGAIN</button>
-    </div>
-  </div>
-</div>
-
 <!-- ACHIEVEMENT TOAST CONTAINER -->
 <div id="achievement-toast-container" style="position: fixed; bottom: 20px; right: 20px; display: flex; flex-direction: column; gap: 10px; z-index: 1000; pointer-events: none;"></div>
-<div class="settings-overlay hidden" id="wheelOverlay">
-  <div class="settings-panel" style="display: flex; flex-direction: column; align-items: center; position: relative; width: min(420px, 90vw); background: #0b0213; border-color: #ff007f; box-shadow: 0 0 40px rgba(255,0,127,0.4);">
-    <button class="close-btn" id="closeWheelBtn" style="position: absolute; top: 15px; right: 20px; color: #ffaa00; text-shadow: 0 0 10px #ffaa00;">✕</button>
-    <div class="overlay-title" style="margin-bottom: 2rem; font-size: 1.5rem; color: #ffaa00; text-shadow: 0 0 15px #ffaa00;">CHOOSE NEXT GAME</div>
-
-    <div class="wheel-container">
-      <div class="wheel-pointer">▼</div>
-      <div class="wheel" id="spinWheel">
-        <div class="slice-text" style="--i: 0;">🚀 Space Shooter</div>
-        <div class="slice-text" style="--i: 1;">🐦 Flappy Bird</div>
-        <div class="slice-text" style="--i: 2;">☄️ Asteroid Dodge</div>
-        <div class="slice-text" style="--i: 3;">🐻 Whack A Bear</div>
-        <div class="slice-text" style="--i: 4;">🦕 Dino Jump</div>
-        <div class="slice-text" style="--i: 5;">🧟 Zombie Shooter</div>
-      </div>
-      <button class="wheel-spin-btn" id="spinBtn">SPIN</button>
-    </div>
-  </div>
-</div>
 
 <div class="settings-overlay hidden" id="winnerOverlay" style="z-index: 300;">
   <div class="settings-panel" style="display: flex; flex-direction: column; align-items: center; text-align: center; background: #051329; border-color: #00d2ff; box-shadow: 0 0 50px rgba(0,210,255,0.6);">

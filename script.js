@@ -2,8 +2,25 @@
 const STATE = {
   name: '', avatar: '', level: 'beginner', xp: 0, gamesPlayed: 0,
   bestCombo: 0, totalScore: 0, soundOn: true, volume: 0.5,
+  coins: 0,
   bestScores: {space:0,flappy:0,asteroid:0,whack:0,dino:0},
-  leaderboard: [], emojiAvatar: '🎮'
+  leaderboard: [], emojiAvatar: '🎮',
+  dayStreak: 0,
+  dailyChallengeDay: '',
+  dailyChallengeCompleted: false,
+  dailyRewardClaimed: false,
+  dailyGamesPlayed: 0,
+  dailyCategoriesPlayed: [],
+  dailyHighScoreChallenge: false,
+  dailyWinStreak: 0,
+  gameStats: {
+    space:{plays:420,views:950},
+    flappy:{plays:320,views:840},
+    asteroid:{plays:280,views:760},
+    whack:{plays:230,views:510},
+    dino:{plays:390,views:920},
+    zombie:{plays:170,views:430}
+  }
 };
 
 const QUOTES = [
@@ -20,6 +37,23 @@ const QUOTES = [
 
 const LEVELS_XP = [{name:'ROOKIE',min:0,max:500},{name:'PLAYER',min:500,max:2000},{name:'PRO',min:2000,max:5000},{name:'LEGEND',min:5000,max:Infinity}];
 const AVATAR_STYLES = ['adventurer','adventurer-neutral','avataaars','big-ears','big-ears-neutral','bottts','croodles','fun-emoji','icons','identicon','initials','lorelei','micah','miniavs','notionists','open-peeps','personas','pixel-art','shapes'];
+
+const GAME_LIST = [
+  {id:'space',name:'SPACE SHOOTER',emoji:'🚀',category:'action',desc:'Power-ups: 🔱 Triple Shot, 💥 Big Bullet, 💣 Bomb! Press B for Bomb.',banner:'banner-space',subline:'⚡💥🔱'},
+  {id:'flappy',name:'FLAPPY BIRD',emoji:'🐦',category:'arcade',desc:'Classic flappy action. Space or tap to flap.',banner:'banner-flappy',subline:'🌿🌤️💨'},
+  {id:'asteroid',name:'ASTEROID DODGE',emoji:'☄️',category:'action',desc:'Dodge spinning rocks. Speed increases over time.',banner:'banner-asteroid',subline:'🌌🪐✨'},
+  {id:'whack',name:'WHACK A BEAR',emoji:'🐻',category:'multiplayer',desc:'60 seconds. Click those bears before they hide!',banner:'banner-whack',subline:'🔨💥⭐'},
+  {id:'dino',name:'DINO JUMP',emoji:'🦕',category:'arcade',desc:'Endless runner with double jump. Dodge cacti & pterodactyls!',banner:'banner-dino',subline:'🌵🦅💨'},
+  {id:'zombie',name:'ZOMBIE SHOOTER',emoji:'🧟',category:'multiplayer',desc:'Survive the apocalypse. WASD to move, Click to shoot!',banner:'banner-zombie',subline:'🩸🔫🧟'}
+];
+const GAME_STATS_DEFAULTS = {
+  space:{plays:420,views:950},
+  flappy:{plays:320,views:840},
+  asteroid:{plays:280,views:760},
+  whack:{plays:230,views:510},
+  dino:{plays:390,views:920},
+  zombie:{plays:170,views:430}
+};
 
 // ===== AUDIO ENGINE =====
 let audioCtx;
@@ -45,8 +79,81 @@ const SFX={
   whack:()=>{playTone(500,'square',0.1,0.3);playTone(300,'square',0.08,0.2)},
   powerup:()=>{[300,400,500,700,1000].forEach((f,i)=>setTimeout(()=>playTone(f,'sine',0.15,0.3),i*60))},
   click:()=>{playTone(800,'sine',0.05,0.1)},
-  select:()=>{playTone(600,'sine',0.08,0.1);setTimeout(()=>playTone(900,'sine',0.06,0.08),60)}
+  select:()=>{playTone(600,'sine',0.08,0.1);setTimeout(()=>playTone(900,'sine',0.06,0.08),60)},
+  success:()=>{playTone(523.25,'sine',0.2,0.2);setTimeout(()=>playTone(659.25,'sine',0.2,0.2),100);setTimeout(()=>playTone(783.99,'sine',0.3,0.25),200)},
+  notification:()=>{playTone(440,'sine',0.1,0.15);setTimeout(()=>playTone(494,'sine',0.1,0.15),80)},
+  hover:()=>{playTone(700,'sine',0.05,0.08)}
 };
+
+let bgMusicNodes=null;
+function playBackgroundTone(freq,dur=0.18,vol=0.06){
+  if(!STATE.soundOn) return;
+  const ctx=getAudio();
+  const o=ctx.createOscillator();
+  const g=ctx.createGain();
+  o.connect(g);g.connect(ctx.destination);
+  o.type='triangle';o.frequency.setValueAtTime(freq,ctx.currentTime);
+  g.gain.setValueAtTime(vol*STATE.volume,ctx.currentTime);
+  g.gain.exponentialRampToValueAtTime(0.001,ctx.currentTime+dur);
+  o.start();o.stop(ctx.currentTime+dur);
+}
+function startBackgroundMusic(){
+  if(bgMusicNodes||!STATE.soundOn) return;
+  const ctx=getAudio();
+  if(ctx.state==='suspended'){ctx.resume();}
+  const masterGain=ctx.createGain();
+  masterGain.gain.value=0.03*STATE.volume;
+  masterGain.connect(ctx.destination);
+
+  const bass=ctx.createOscillator();
+  bass.type='sine';
+  bass.frequency.value=55;
+  const bassGain=ctx.createGain();
+  bassGain.gain.value=0.02*STATE.volume;
+  bass.connect(bassGain);
+  bassGain.connect(masterGain);
+
+  const pad=ctx.createOscillator();
+  pad.type='triangle';
+  pad.frequency.value=220;
+  const padGain=ctx.createGain();
+  padGain.gain.value=0.01*STATE.volume;
+  padGain.gain.setValueAtTime(0.01*STATE.volume,ctx.currentTime);
+  padGain.gain.linearRampToValueAtTime(0.02*STATE.volume,ctx.currentTime+2);
+  pad.connect(padGain);
+
+  const filter=ctx.createBiquadFilter();
+  filter.type='lowpass';
+  filter.frequency.value=800;
+  padGain.connect(filter);
+  filter.connect(masterGain);
+
+  bass.start();
+  pad.start();
+
+  const notes=[220,246.94,196,174.61];
+  let noteIndex=0;
+  const melodyInterval=setInterval(()=>{
+    if(!STATE.soundOn) return;
+    const freq=notes[noteIndex%notes.length];
+    playBackgroundTone(freq,0.5,0.035);
+    noteIndex++;
+  },1400);
+
+  bgMusicNodes={ctx,bass,pad,masterGain,melodyInterval};
+}
+function stopBackgroundMusic(){
+  if(!bgMusicNodes) return;
+  if(bgMusicNodes.bass) bgMusicNodes.bass.stop();
+  if(bgMusicNodes.pad) bgMusicNodes.pad.stop();
+  clearInterval(bgMusicNodes.melodyInterval);
+  bgMusicNodes=null;
+}
+function updateBackgroundMusic(){
+  if(STATE.soundOn) startBackgroundMusic(); else stopBackgroundMusic();
+}
+
+document.body.addEventListener('click',()=>{ if(STATE.soundOn) startBackgroundMusic(); },{once:true});
 
 // ===== PARTICLE BACKGROUND =====
 const pbCanvas=document.getElementById('particle-bg');
@@ -91,6 +198,126 @@ function drawParticles(){
 window.addEventListener('mousemove',e=>{mouse.x=e.clientX;mouse.y=e.clientY});
 resizeParticles();initParticles();drawParticles();
 window.addEventListener('resize',()=>{resizeParticles();initParticles()});
+
+// ===== ENGAGEMENT & NOTIFICATIONS =====
+function getDailyChallengeIndex(){
+  return Math.floor(Date.now()/(1000*60*60*24))%4;
+}
+function getDailyChallenge(){
+  const challenges=['Play 3 games','Score 1000+ points','Try all categories','Win 2 games in a row'];
+  return challenges[getDailyChallengeIndex()];
+}
+function getDailyChallengeReward(){
+  const rewards=[150,180,160,200];
+  return rewards[getDailyChallengeIndex()];
+}
+function checkDailyReward(){
+  const lastDaily=localStorage.getItem('last_daily_reward');
+  const today=new Date().toDateString();
+  if(lastDaily!==today){localStorage.setItem('last_daily_reward',today);return true;}
+  return false;
+}
+function checkReturnVisit(){
+  const lastVisit=localStorage.getItem('last_hub_visit');
+  const today=new Date().toDateString();
+  if(lastVisit&&lastVisit!==today){
+    const lastDate=new Date(lastVisit);
+    const daysDiff=Math.floor((new Date()-lastDate)/(1000*60*60*24));
+    if(daysDiff===1){STATE.dayStreak=(STATE.dayStreak||0)+1;showEngagementNotification('Welcome back! You\'re on a streak 🔥','🏆');}
+    else if(daysDiff>1){STATE.dayStreak=1;showEngagementNotification('Welcome back after '+daysDiff+' days!','👋');}
+    localStorage.setItem('last_hub_visit',today);
+    saveState();
+  }
+  else if(!lastVisit){
+    STATE.dayStreak=1;localStorage.setItem('last_hub_visit',today);saveState();
+  }
+}
+function completeDailyChallenge(reason){
+  if(STATE.dailyChallengeCompleted) return;
+  STATE.dailyChallengeCompleted=true;
+  saveState();
+  showEngagementNotification('Daily challenge complete! '+reason,'✅');
+  updateDailyChallengeUI();
+}
+function claimDailyChallengeReward(){
+  if(STATE.dailyRewardClaimed) return;
+  STATE.dailyRewardClaimed=true;
+  STATE.dailyChallengeCompleted=true;
+  const reward = getDailyChallengeReward();
+  const coinReward = 30 + Math.floor(reward * 0.2);
+  STATE.coins = (STATE.coins||0) + coinReward;
+  addXp(reward);
+  saveState();
+  showEngagementNotification('Claimed reward: +'+reward+' XP +'+coinReward+' coins','🎁');
+  spawnConfetti();
+  updateDailyChallengeUI();
+}
+function refreshDailyChallengeProgress(){
+  const challenge=getDailyChallenge();
+  if(STATE.dailyChallengeCompleted) return;
+  if(challenge==='Play 3 games'&&STATE.dailyGamesPlayed>=3) return completeDailyChallenge('Played 3 games');
+  if(challenge==='Try all categories'&&new Set(STATE.dailyCategoriesPlayed||[]).size>=3) return completeDailyChallenge('Tried all categories');
+  if(challenge==='Score 1000+ points'&&STATE.dailyHighScoreChallenge) return completeDailyChallenge('Scored 1000+ points');
+  if(challenge==='Win 2 games in a row'&&STATE.dailyWinStreak>=2) return completeDailyChallenge('Won two games in a row');
+}
+function updateDailyChallengeUI(){
+  const amount=getDailyChallengeReward();
+  const status=document.getElementById('challengeStatus');
+  const completeBtn=document.getElementById('completeChallengeBtn');
+  const claimBtn=document.getElementById('claimRewardBtn');
+  const bonusLabel=document.getElementById('dailyBonus');
+  const coinLabel=document.getElementById('coinBalance');
+  if(!status||!completeBtn||!claimBtn||!bonusLabel||!coinLabel) return;
+  bonusLabel.textContent='+'+amount+' XP';
+  coinLabel.textContent=(STATE.coins||0)+' coins';
+  document.getElementById('dailyStreak').textContent=STATE.dayStreak||1;
+  if(STATE.dailyRewardClaimed){
+    status.textContent='STATUS: Reward claimed';
+    status.style.background='rgba(16,185,129,0.18)';
+    completeBtn.classList.add('hidden');
+    claimBtn.classList.add('hidden');
+  } else {
+    status.textContent=STATE.dailyChallengeCompleted ? 'STATUS: Complete — claim now' : 'STATUS: Claim coins now';
+    status.style.background='rgba(59,130,246,0.15)';
+    completeBtn.classList.add('hidden');
+    claimBtn.classList.remove('hidden');
+  }
+  document.getElementById('dailyChallenge').textContent=getDailyChallenge()+' — reward '+amount+' XP!';
+}
+function resetDailyChallengeIfNeeded(){
+  const today=new Date().toDateString();
+  if(STATE.dailyChallengeDay!==today){
+    STATE.dailyChallengeDay=today;
+    STATE.dailyChallengeCompleted=false;
+    STATE.dailyRewardClaimed=false;
+    STATE.dailyGamesPlayed=0;
+    STATE.dailyCategoriesPlayed=[];
+    STATE.dailyHighScoreChallenge=false;
+    STATE.dailyWinStreak=0;
+    saveState();
+  }
+}
+function showEngagementNotification(msg,icon='✨'){
+  const div=document.createElement('div');
+  div.style.cssText='position:fixed;top:80px;right:20px;background:rgba(124,58,237,0.9);color:#fff;padding:1rem 1.5rem;border-radius:12px;z-index:1000;animation:slideIn 0.4s ease;font-family:Orbitron,sans-serif;font-size:0.9rem;border:1px solid rgba(255,255,255,0.2);box-shadow:0 0 20px rgba(124,58,237,0.6)';
+  div.textContent=`${icon} ${msg}`;
+  document.body.appendChild(div);
+  SFX.notification();
+  setTimeout(()=>div.remove(),3000);
+}
+function spawnConfetti(){
+  const colors=['#7C3AED','#22D3EE','#F59E0B','#EC4899','#10B981'];
+  for(let i=0;i<30;i++){
+    const piece=document.createElement('div');
+    piece.className='confetti-piece';
+    piece.style.left=Math.random()*window.innerWidth+'px';
+    piece.style.backgroundColor=colors[Math.floor(Math.random()*colors.length)];
+    piece.style.animationDuration=(2+Math.random()*1)+'s';
+    piece.style.animationDelay=Math.random()*0.5+'s';
+    document.body.appendChild(piece);
+    setTimeout(()=>piece.remove(),3000);
+  }
+}
 
 // ===== LOADING =====
 function runLoading(){
@@ -202,19 +429,100 @@ document.querySelectorAll('.level-card').forEach(card=>{
 
 // ===== SAVE/LOAD =====
 function saveState(){localStorage.setItem('hw_state',JSON.stringify(STATE))}
+function ensureGameStats(){
+  STATE.gameStats = STATE.gameStats || {};
+  Object.keys(GAME_STATS_DEFAULTS).forEach(id=>{
+    if(!STATE.gameStats[id]) STATE.gameStats[id] = {...GAME_STATS_DEFAULTS[id]};
+  });
+}
 function loadState(){
   const s=localStorage.getItem('hw_state');
   if(s){const d=JSON.parse(s);Object.assign(STATE,d)}
+  ensureGameStats();
 }
 loadState();
+let currentGameFilter = 'all';
+let currentGameSearch = '';
+
+function getGameData(){
+  return GAME_LIST.map(game=>{
+    const stats = STATE.gameStats[game.id] || {plays:0,views:0};
+    const engagement = stats.plays * 1.2 + stats.views;
+    return {...game,plays:stats.plays,views:stats.views,engagement};
+  });
+}
+function renderGameCard(game, index=0){
+  return `
+    <div class="game-card" data-game="${game.id}" data-category="${game.category}" style="animation:slideIn 0.5s ease-out ${index*0.05}s forwards;opacity:0">
+      <div class="game-banner ${game.banner}">${game.emoji}<span style="position:absolute;font-size:1rem;bottom:8px;left:10px;opacity:.5">${game.subline}</span></div>
+      <div class="game-card-info">
+        <div class="game-name">${game.name}</div>
+        <div class="game-desc">${game.desc}</div>
+        <div class="game-meta" style="font-size:.82rem;color:var(--text2);margin:0.6rem 0;">Plays: ${game.plays} · Views: ${game.views}</div>
+        <div class="game-best">BEST: <span class="best-score" data-game="${game.id}">${STATE.bestScores[game.id]||0}</span></div>
+      </div>
+      <button class="play-btn">▶ Play Now</button>
+    </div>
+  `;
+}
+function filterGames(games){
+  return games.filter(game=>{
+    const matchCategory = currentGameFilter==='all' || game.category===currentGameFilter;
+    const query = currentGameSearch.trim().toLowerCase();
+    if(!matchCategory) return false;
+    if(!query) return true;
+    return game.name.toLowerCase().includes(query) || game.desc.toLowerCase().includes(query) || game.category.toLowerCase().includes(query);
+  });
+}
+function renderGameSections(){
+  const games = filterGames(getGameData());
+  const popular = games.slice().sort((a,b)=>b.plays-a.plays||b.engagement-a.engagement).slice(0,3);
+  const trending = games.slice().sort((a,b)=>b.views-a.views||b.engagement-a.engagement).slice(0,3);
+  const allGames = games.slice().sort((a,b)=>b.engagement-a.engagement);
+  document.getElementById('popularGames').innerHTML = popular.map((g,i)=>renderGameCard(g,i)).join('') || '';
+  document.getElementById('trendingGames').innerHTML = trending.map((g,i)=>renderGameCard(g,i)).join('') || '';
+  document.getElementById('allGamesGrid').innerHTML = allGames.map((g,i)=>renderGameCard(g,i)).join('') || '';
+}
+
+function setGameFilter(filter){
+  currentGameFilter = filter;
+  document.querySelectorAll('#filterPills .filter-btn').forEach(btn=>btn.classList.toggle('active', btn.dataset.filter===filter));
+  renderGameSections();
+}
+function setSearchQuery(value){
+  currentGameSearch = value;
+  renderGameSections();
+}
+
+function initGameSearchAndFilters(){
+  const searchInput = document.getElementById('gameSearch');
+  const filterContainer = document.getElementById('filterPills');
+  if(searchInput){
+    searchInput.addEventListener('input', e=>{setSearchQuery(e.target.value)});
+  }
+  if(filterContainer){
+    filterContainer.addEventListener('click', e=>{
+      const btn = e.target.closest('.filter-btn');
+      if(!btn) return;
+      setGameFilter(btn.dataset.filter || 'all');
+    });
+  }
+}
+initGameSearchAndFilters();
 
 // ===== HUB =====
 function getRank(){return LEVELS_XP.find(l=>STATE.xp>=l.min&&STATE.xp<l.max)||LEVELS_XP[0]}
 function getRankClass(name){return{ROOKIE:'rank-rookie',PLAYER:'rank-player',PRO:'rank-pro',LEGEND:'rank-legend'}[name]}
 function loadHub(){
+  resetDailyChallengeIfNeeded();
   document.getElementById('navName').textContent=STATE.name;
   document.getElementById('navBest').textContent=Math.max(...Object.values(STATE.bestScores),0);
   document.getElementById('hubAvatar').src=STATE.avatar;
+  updateBackgroundMusic();
+  checkReturnVisit();
+  if(checkDailyReward()){showEngagementNotification('Daily Reward Unlocked! Play to earn XP','🎁');}
+  refreshDailyChallengeProgress();
+  updateDailyChallengeUI();
   document.getElementById('heroName').textContent=STATE.name;
   const rank=getRank();
   const badge=document.getElementById('rankBadge');
@@ -227,10 +535,12 @@ function loadHub(){
   document.getElementById('xpNext').textContent=nextRank?(rank.max-STATE.xp)+' XP to '+nextRank.name:'MAX RANK 🏆';
   document.getElementById('statGames').textContent=STATE.gamesPlayed;
   document.getElementById('statCombo').textContent=STATE.bestCombo+'x';
+  document.getElementById('dailyStreak').textContent=STATE.dayStreak||1;
   document.getElementById('totalScore').textContent=STATE.totalScore;
   document.getElementById('totalGames').textContent=STATE.gamesPlayed;
   document.getElementById('bestCombo').textContent=STATE.bestCombo+'x';
   document.getElementById('totalXp').textContent=STATE.xp;
+  renderGameSections();
   document.querySelectorAll('.best-score').forEach(el=>{el.textContent=STATE.bestScores[el.dataset.game]||0});
   renderLeaderboard();
   document.getElementById('settingsName').value=STATE.name;
@@ -260,7 +570,8 @@ function addXp(amount){
   const prev=getRank();
   STATE.xp+=amount;saveState();
   const curr=getRank();
-  if(curr.name!==prev.name){SFX.levelUp();showFloatingText(gameCanvasWrap,'🎉 RANK UP: '+curr.name+'!',true)}
+  if(curr.name!==prev.name){SFX.success();showFloatingText(gameCanvasWrap,'🎉 RANK UP: '+curr.name+'!',true);showEngagementNotification('New Rank: '+curr.name,'🏆');}
+  else if(amount>50){showEngagementNotification('+'+amount+' XP Earned!','⭐');}
 }
 
 // ===== SETTINGS =====
@@ -279,10 +590,21 @@ document.getElementById('closeSettings').onclick=()=>{document.getElementById('s
 document.getElementById('soundToggle').onclick=function(){
   STATE.soundOn=!STATE.soundOn;this.classList.toggle('on',STATE.soundOn);
   document.getElementById('soundToggleNav').textContent=STATE.soundOn?'🔊':'🔇';
+  updateBackgroundMusic();
   saveState();
+  if(STATE.soundOn){SFX.success();showEngagementNotification('Sound Enabled','🔊');}
+  else{showEngagementNotification('Sound Disabled','🔇');}
 };
 document.getElementById('soundToggleNav').onclick=()=>document.getElementById('soundToggle').click();
-document.getElementById('volumeSlider').oninput=function(){STATE.volume=+this.value;saveState()};
+document.getElementById('volumeSlider').oninput=function(){
+  STATE.volume=+this.value;
+  saveState();
+  if(bgMusicNodes&&bgMusicNodes.masterGain){
+    bgMusicNodes.masterGain.gain.value=0.05*STATE.volume;
+  }
+};
+document.getElementById('completeChallengeBtn').onclick=()=>completeDailyChallenge('Manually marked complete');
+document.getElementById('claimRewardBtn').onclick=()=>claimDailyChallengeReward();
 document.getElementById('saveName').onclick=()=>{
   const n=document.getElementById('settingsName').value.trim();
   if(n){STATE.name=n;saveState();loadHub();SFX.select()}
@@ -301,6 +623,10 @@ document.getElementById('gamesGrid').addEventListener('click',e=>{
   if(!card||card.classList.contains('locked'))return;
   const game=card.dataset.game;SFX.select();
   launchGame(game);
+});
+document.getElementById('gamesGrid').addEventListener('mouseover',e=>{
+  const card=e.target.closest('.game-card');
+  if(card&&!card.classList.contains('locked')){SFX.hover();}
 });
 document.getElementById('backToHub').onclick=()=>{stopGame();showMobileControls('');showScreen('hub-screen');loadHub()};
 document.getElementById('pauseBtn').onclick=togglePause;
@@ -325,7 +651,15 @@ let isSpinning = false;
 
 function openSpinner() {
   document.getElementById('spinnerOverlay').classList.remove('hidden');
+  // Reset canvas rotation
+  const canvas = document.getElementById('spinnerCanvas');
+  canvas.style.transition = 'none';
+  canvas.style.transform = 'rotate(0rad)';
   initSpinnerCanvas();
+  // Automatically start spinning when opened
+  setTimeout(() => {
+    spinWheelJS();
+  }, 500); // Small delay to show the wheel first
   SFX.click();
 }
 
@@ -406,12 +740,20 @@ function spinWheel() {
   isSpinning = true;
 
   const canvas = document.getElementById('spinnerCanvas');
-  const totalRotation = Math.PI * 2 * (5 + Math.random() * 3);
-  const targetAngle = totalRotation;
+  const segments = SPINNER_GAMES.length;
+  const anglePerSegment = 2 * Math.PI / segments;
+  const fullRotations = 5 + Math.random() * 3;
+  const selectedIndex = Math.floor(Math.random() * segments);
+  const targetAngle = fullRotations * 2 * Math.PI + selectedIndex * anglePerSegment;
 
+  // Reset canvas rotation
   canvas.style.transition = 'none';
-  canvas.style.transform = 'rotate(0deg)';
+  canvas.style.transform = 'rotate(0rad)';
 
+  // Force reflow
+  canvas.offsetHeight;
+
+  // Start spinning animation
   requestAnimationFrame(() => {
     canvas.style.transition = 'transform 4s cubic-bezier(0.2, 0.8, 0.3, 1)';
     canvas.style.transform = `rotate(${targetAngle}rad)`;
@@ -420,15 +762,57 @@ function spinWheel() {
   SFX.select();
 
   setTimeout(() => {
-    const segments = SPINNER_GAMES.length;
-    const normalizedAngle = (targetAngle % (2 * Math.PI));
-    const pointerAngle = (2 * Math.PI - normalizedAngle + Math.PI / 2) % (2 * Math.PI);
-    const selectedIndex = Math.floor(pointerAngle / (2 * Math.PI / segments));
     selectedSpinnerGame = SPINNER_GAMES[selectedIndex];
-
     isSpinning = false;
     showSpinnerResult();
   }, 4200);
+}
+
+// Alternative spinning function using JavaScript animation
+function spinWheelJS() {
+  if (isSpinning) return;
+  isSpinning = true;
+
+  const canvas = document.getElementById('spinnerCanvas');
+  if (!canvas) {
+    console.error('Spinner canvas not found');
+    isSpinning = false;
+    return;
+  }
+
+  // For testing: simple 360 degree rotation
+  const targetAngle = 2 * Math.PI; // One full rotation
+
+  // Reset canvas rotation
+  canvas.style.transition = 'none';
+  canvas.style.transform = 'rotate(0rad)';
+  canvas.style.transformOrigin = 'center center';
+
+  let currentAngle = 0;
+  const startTime = performance.now();
+  const duration = 2000; // 2 seconds for testing
+
+  function animate(currentTime) {
+    const elapsed = currentTime - startTime;
+    const progress = Math.min(elapsed / duration, 1);
+    
+    // Linear interpolation for testing
+    currentAngle = targetAngle * progress;
+    
+    canvas.style.transform = `rotate(${currentAngle}rad)`;
+    
+    if (progress < 1) {
+      requestAnimationFrame(animate);
+    } else {
+      // For testing, just reset after one rotation
+      setTimeout(() => {
+        canvas.style.transform = 'rotate(0rad)';
+        isSpinning = false;
+      }, 500);
+    }
+  }
+
+  requestAnimationFrame(animate);
 }
 
 function showSpinnerResult() {
@@ -448,22 +832,6 @@ function hideSpinnerResult() {
   document.getElementById('spinnerResultOverlay').classList.add('hidden');
   selectedSpinnerGame = null;
 }
-
-document.getElementById('openSpinner').onclick = openSpinner;
-document.getElementById('closeSpinner').onclick = closeSpinner;
-document.getElementById('spinBtn').onclick = spinWheel;
-
-document.getElementById('playSelectedGame').onclick = () => {
-  if (selectedSpinnerGame) {
-    hideSpinnerResult();
-    launchGame(selectedSpinnerGame.id);
-  }
-};
-
-document.getElementById('spinAgainBtn').onclick = () => {
-  hideSpinnerResult();
-  openSpinner();
-};
 
 let currentGame='',gamePaused=false,gameRunning=false,gameLoop=null;
 const gameCanvasWrap=document.getElementById('gameCanvasWrap');
@@ -496,7 +864,17 @@ function launchGame(game){
   }
 
   gameRunning=true;
-  STATE.gamesPlayed++;saveState();
+  STATE.gamesPlayed++;
+  STATE.gameStats[currentGame] = STATE.gameStats[currentGame] || {plays:0,views:0};
+  STATE.gameStats[currentGame].views = (STATE.gameStats[currentGame].views||0) + 1;
+  const gameData = GAME_LIST.find(g=>g.id===game);
+  if(gameData){
+    STATE.dailyGamesPlayed = (STATE.dailyGamesPlayed||0)+1;
+    STATE.dailyCategoriesPlayed = STATE.dailyCategoriesPlayed||[];
+    if(!STATE.dailyCategoriesPlayed.includes(gameData.category)) STATE.dailyCategoriesPlayed.push(gameData.category);
+  }
+  refreshDailyChallengeProgress();
+  saveState();
   GAMES[game]?.start();
 }
 
@@ -532,8 +910,15 @@ function endGame(score,gameName){
   gameRunning=false;
   const isHighScore=score>STATE.bestScores[currentGame];
   addToLeaderboard(gameName,score);
+  STATE.gameStats[currentGame] = STATE.gameStats[currentGame] || {plays:0,views:0};
+  STATE.gameStats[currentGame].plays = (STATE.gameStats[currentGame].plays||0) + 1;
   const xpGained=Math.floor(score/2)+STATE.gamesPlayed*5;
-  addXp(xpGained);STATE.totalScore+=score;saveState();
+  addXp(xpGained);
+  STATE.totalScore+=score;
+  STATE.dailyHighScoreChallenge = STATE.dailyHighScoreChallenge || score>=1000;
+  STATE.dailyWinStreak = score>0 ? (STATE.dailyWinStreak||0)+1 : 0;
+  refreshDailyChallengeProgress();
+  saveState();
   const overlay=document.getElementById('gameOverOverlay');
   document.getElementById('gameOverTitle').textContent=isHighScore?'🏆 NEW HIGH SCORE!':'GAME OVER';
   document.getElementById('gameOverScore').textContent='Score: '+score;
@@ -1831,14 +2216,6 @@ window.addEventListener('load',()=>{
   }
 });
 window.addEventListener('resize',()=>{if(gameRunning)resizeCanvas()});
-
-document.addEventListener("click", (e) => {
-  if (e.target.classList.contains("play-btn")) {
-    e.stopPropagation();
-    const game = e.target.closest(".game-card").dataset.game;
-    startGame(game);
-  }
-});
 // ===== ARCADE SPIN WHEEL LOGIC =====
 let currentWheelRotation = 0;
 let spunGameId = ''; // Stores the ID of the winning game

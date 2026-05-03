@@ -13,7 +13,6 @@
 
 <canvas id="particle-bg"></canvas>
 
-
 <!-- LOADING SCREEN -->
 <div class="screen" id="loading-screen">
   <div class="logo-container">
@@ -130,12 +129,15 @@
         <span class="search-icon">🔍</span>
         <input type="text" id="gameSearch" placeholder="Search Unimax games or genres..." autocomplete="off">
       </div>
-      <div class="filter-pills" id="filterPills">
-        <button class="filter-btn active" data-filter="all">All</button>
-        <button class="filter-btn" data-filter="arcade">🕹️ Arcade</button>
-        <button class="filter-btn" data-filter="action">⚔️ Action</button>
-        <button class="filter-btn" data-filter="multiplayer">👥 Multiplayer</button>
-      </div>
+      
+      <button class="spin-to-play-btn" id="spinToPlayBtn">🎡 SPIN TO PLAY</button>
+    </div>
+
+    <div class="filter-pills" id="filterPills">
+      <button class="filter-btn active" data-filter="all">All</button>
+      <button class="filter-btn" data-filter="arcade">🕹️ Arcade</button>
+      <button class="filter-btn" data-filter="action">⚔️ Action</button>
+      <button class="filter-btn" data-filter="multiplayer">👥 Multiplayer</button>
     </div>
 
 
@@ -154,6 +156,7 @@
         <div class="group-title" id="allGamesTitle">All Games</div>
         <div class="games-grid" id="allGamesGrid"></div>
       </div>
+
     </div>
 
     <!-- Bottom row -->
@@ -323,6 +326,39 @@
       <button class="tutorial-continue" id="asteroidTutorialBtn">CONTINUE →</button>
     </div>
 
+    <!-- Flappy Bird Tutorial Overlay -->
+    <div class="tutorial-overlay hidden" id="flappyTutorial">
+      <div class="tutorial-title">🐦 FLAPPY BIRD</div>
+      <div style="font-size:.8rem;color:var(--text2);text-align:center;max-width:500px">Navigate through pipes and collect power-ups!</div>
+      <div class="tutorial-grid">
+        <div class="tutorial-key">
+          <div class="tutorial-key-icon">⎵</div>
+          <div class="tutorial-key-label"><strong>Flap</strong>Space bar or click to flap</div>
+        </div>
+        <div class="tutorial-key">
+          <div class="tutorial-key-icon">🖱</div>
+          <div class="tutorial-key-label"><strong>Flap</strong>Click/Tap screen to flap</div>
+        </div>
+        <div class="tutorial-key">
+          <div class="tutorial-key-icon">❤️</div>
+          <div class="tutorial-key-label"><strong>Heart</strong>Adds one extra life</div>
+        </div>
+        <div class="tutorial-key">
+          <div class="tutorial-key-icon">🛡️</div>
+          <div class="tutorial-key-label"><strong>Shield</strong>Protects from next wall hit</div>
+        </div>
+        <div class="tutorial-key">
+          <div class="tutorial-key-icon">⚡</div>
+          <div class="tutorial-key-label"><strong>Electric</strong>Skip 10+ walls, gain 10 pts!</div>
+        </div>
+        <div class="tutorial-key">
+          <div class="tutorial-key-icon">⏸</div>
+          <div class="tutorial-key-label"><strong>Pause</strong>ESC or pause button</div>
+        </div>
+      </div>
+      <button class="tutorial-continue" id="flappyTutorialBtn">START FLYING →</button>
+    </div>
+
     <!-- Zombie Shooter Tutorial Overlay -->
     <div class="tutorial-overlay hidden" id="zombieTutorial">
       <div class="tutorial-title">🧟 ZOMBIE SHOOTER</div>
@@ -343,6 +379,12 @@
       </div>
       <button class="tutorial-continue" id="zombieTutorialBtn">CONTINUE →</button>
     </div>
+
+
+
+
+
+
   </div>
 </div>
 

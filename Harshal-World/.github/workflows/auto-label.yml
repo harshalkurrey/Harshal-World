@@ -1,0 +1,15 @@
+name: Auto Label NSOC Issues
+
+on:
+  issues:
+    types: [opened]
+
+jobs:
+  add-label:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Add label if NSOC keyword found
+        uses: actions-ecosystem/action-add-labels@v1
+        if: contains(github.event.issue.title, 'NSOC') || contains(github.event.issue.body, 'NSOC')
+        with:
+          labels: NSOC '26

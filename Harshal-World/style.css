@@ -197,7 +197,7 @@ h1,h2,h3,h4,h5,h6,.section-title,.entry-title,.level-title,.hero-name,.overlay-t
 .toggle.on{background:var(--purple)}
 .toggle::after{content:'';position:absolute;top:3px;left:3px;width:18px;height:18px;background:#fff;border-radius:50%;transition:transform .3s;box-shadow:0 1px 4px rgba(0,0,0,0.3)}
 .toggle.on::after{transform:translateX(20px)}
-.volume-slider{width:100px;-webkit-appearance:none;height:4px;background:rgba(255,255,255,0.1);border-radius:4px;outline:none}
+.volume-slider{width:100px;--appearance:none;height:4px;background:rgba(255,255,255,0.1);border-radius:4px;outline:none}
 .volume-slider::-webkit-slider-thumb{-webkit-appearance:none;width:16px;height:16px;background:var(--purple2);border-radius:50%;cursor:pointer}
 .emoji-pick{display:flex;gap:.5rem;flex-wrap:wrap;margin-top:.5rem}
 .emoji-btn{background:none;border:1px solid var(--border);border-radius:8px;padding:.3rem .5rem;font-size:1.2rem;cursor:pointer;transition:all .2s}

@@ -1293,6 +1293,11 @@ GAMES.flappy={
     gCtx.fillStyle=gG;gCtx.fillRect(0,H-40,W,40);
     gCtx.save();gCtx.shadowColor='#4ade80';gCtx.shadowBlur=10;gCtx.strokeStyle='#4ade80';gCtx.lineWidth=1.5;
     gCtx.beginPath();gCtx.moveTo(0,H-40);gCtx.lineTo(W,H-40);gCtx.stroke();gCtx.shadowBlur=0;gCtx.restore();
+    // Bottom-left decorations for Flappy Bird
+    gCtx.save();
+    gCtx.font='32px serif';gCtx.textAlign='left';gCtx.globalAlpha=0.6;
+    gCtx.fillText('🐠 🐚',15,H-10);
+    gCtx.globalAlpha=1;gCtx.restore();
     if(this.shield){
       gCtx.save();
       gCtx.shadowColor='#22D3EE';
@@ -1509,6 +1514,10 @@ GAMES.whack={
     gCtx.fillStyle='rgba(168,130,255,.7)';gCtx.font='bold 14px Orbitron,monospace';gCtx.textAlign='center';gCtx.fillText('WHACK-A-BEAR',W/2,30);
     gCtx.shadowColor='#EF4444';gCtx.shadowBlur=8;
     gCtx.fillStyle='rgba(239,68,68,.8)';gCtx.font='11px Nunito,sans-serif';gCtx.textAlign='left';gCtx.fillText('Misses: '+this.misses,15,H-15);
+    // Bottom-left decorations for Whack a Bear
+    gCtx.fillStyle='rgba(168,130,255,0.7)';gCtx.font='40px serif';gCtx.textAlign='left';gCtx.globalAlpha=0.7;
+    gCtx.fillText('🏹 ⭐',20,H-20);
+    gCtx.globalAlpha=1;
     gCtx.shadowBlur=0;gCtx.restore();
   }
 };
@@ -1991,6 +2000,11 @@ GAMES.dino=(function(){
     ctx.fillRect(15,H-20,100*speedBarPct,6);
     ctx.fillStyle='rgba(255,255,255,0.3)';ctx.font='9px Orbitron,monospace';ctx.textAlign='left';
     ctx.fillText('SPD',120,H-15);
+    // Bottom-left decorations for Dino Jump
+    ctx.save();
+    ctx.font='50px serif';ctx.textAlign='left';ctx.globalAlpha=0.6;
+    ctx.fillText('🌵',20,H-15);
+    ctx.globalAlpha=1;ctx.restore();
     if(mobileDino){
       ctx.fillStyle='rgba(0,255,136,0.45)';ctx.font='10px Orbitron,monospace';ctx.textAlign='center';
       ctx.fillText(DINO_MOBILE_TAP_HINT,W/2,DINO_MOBILE_TAP_HINT_Y);
@@ -2484,6 +2498,11 @@ GAMES.zombie = {
       gCtx.beginPath(); gCtx.arc(pt.x, pt.y, pt.size, 0, Math.PI*2); gCtx.fill();
     });
     gCtx.globalAlpha = 1;
+    // Bottom-left decorations for Zombie Shooter
+    gCtx.save();
+    gCtx.font='45px serif';gCtx.textAlign='left';gCtx.globalAlpha=0.5;
+    gCtx.fillText('🪨 🪨',20,gameCanvas.height-20);
+    gCtx.globalAlpha=1;gCtx.restore();
   },
 
   loop() {

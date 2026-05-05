@@ -1164,91 +1164,208 @@ GAMES.space={
 // ============================================================
 // FLAPPY BIRD
 // ============================================================
-GAMES.flappy={
-  bird:null,pipes:[],score:0,started:false,dead:false,frameCount:0,bg:0,lives:3,invincible:0,powerups:[],shield:false,shieldTimer:0,nextPUScore:5,lastPUScore:0,
-  start(){
-    const W=gameCanvas.width,H=gameCanvas.height;
-    this.bird={x:W*0.22,y:H/2,vy:0,r:14,rot:0};
-    this.pipes=[];this.score=0;this.started=false;this.dead=false;this.frameCount=0;this.bg=0;this.pipeTimer=0;this.lives=3;this.invincible=0;this.powerups=[];this.shield=false;this.shieldTimer=0;this.nextPUScore=5;this.lastPUScore=0;
-    setScore(0);setLives(3);resetCombo();
-    document.getElementById('flappyTutorial').classList.remove('hidden');
-    document.getElementById('flappyTutorialBtn').onclick=()=>{document.getElementById('flappyTutorial').classList.add('hidden');this.started=true;gameLoop=requestAnimationFrame(()=>this.loop())};
-    document.addEventListener('click',this._flap=()=>this.flap(),{once:false});
+// ============================================================
+// FLAPPY BIRD - STABLE MERGED VERSION
+// ============================================================
+GAMES.flappy = {
+  bird: null, pipes: [], score: 0, started: false, dead: false, frameCount: 0, bg: 0, lives: 3, invincible: 0, powerups: [], shield: false, shieldTimer: 0, nextPUScore: 5, lastPUScore: 0,
+  waitingForStart: true, // Prevents instant falling
+
+  start() {
+    const W = gameCanvas.width, H = gameCanvas.height;
+    // Reset all variables
+    this.bird = { x: W * 0.22, y: H / 2, vy: 0, r: 14, rot: 0 };
+    this.pipes = []; this.score = 0; this.started = false; this.dead = false; 
+    this.frameCount = 0; this.bg = 0; this.pipeTimer = 0; this.lives = 3; 
+    this.invincible = 0; this.powerups = []; this.shield = false; 
+    this.shieldTimer = 0; this.nextPUScore = 5; this.lastPUScore = 0;
+    this.waitingForStart = true; 
+
+    // UI Updates
+    if (typeof setScore === 'function') setScore(0);
+    if (typeof setLives === 'function') setLives(3);
+    if (typeof resetCombo === 'function') resetCombo();
+
+    // Tutorial handling
+    const tutorial = document.getElementById('flappyTutorial');
+    if (tutorial) tutorial.classList.remove('hidden');
+
+    document.getElementById('flappyTutorialBtn').onclick = () => {
+      if (tutorial) tutorial.classList.add('hidden');
+      if (typeof gameRunning !== 'undefined') gameRunning = true;
+      this.started = true;
+      
+      // Start the loop
+      requestAnimationFrame(() => this.loop());
+    };
+
+    // Input Listeners
+    document.addEventListener('click', this._flap = () => this.handleInput(), { once: false });
+    
+    // Named reference for keydown so we can remove it later
+    this._onKeyDown = (e) => {
+      if (e.code === 'Space') {
+        e.preventDefault(); // Prevent page scrolling
+        this.handleInput();
+      }
+    };
+    window.addEventListener('keydown', this._onKeyDown);
   },
-  spawnPowerUp(type){
-    const W=gameCanvas.width,H=gameCanvas.height;
-    const validTypes=['heart','shield','electric'];
-    const pType=validTypes.includes(type)?type:validTypes[Math.floor(Math.random()*validTypes.length)];
-    const randPipe=this.pipes[Math.floor(Math.random()*Math.min(3,this.pipes.length))];
-    if(!randPipe)return;
-    this.powerups.push({x:randPipe.x+randPipe.w/2-15,y:(randPipe.top+randPipe.bottom)/2-15,w:30,h:30,type:pType,frame:0,collected:false});
+
+  handleInput() {
+    if (this.waitingForStart && this.started) {
+      this.waitingForStart = false;
+    }
+    this.flap();
   },
-  collectPU(pu){
-    switch(pu.type){
-      case'heart':
-        this.lives=Math.min(this.lives+1,6);
-        setLives(this.lives);
-        SFX.powerup();
-        showFloatingText(gameCanvasWrap,'❤️ +LIFE');
+
+  flap() {
+    if (!this.started || this.dead || (typeof gamePaused !== 'undefined' && gamePaused)) return;
+    this.bird.vy = -6; // Original velocity
+    if (typeof SFX !== 'undefined' && SFX.flap) SFX.flap();
+  },
+
+  spawnPowerUp(type) {
+    const W = gameCanvas.width, H = gameCanvas.height;
+    const validTypes = ['heart', 'shield', 'electric'];
+    const pType = validTypes.includes(type) ? type : validTypes[Math.floor(Math.random() * validTypes.length)];
+    const randPipe = this.pipes[Math.floor(Math.random() * Math.min(3, this.pipes.length))];
+    if (!randPipe) return;
+    this.powerups.push({ x: randPipe.x + randPipe.w / 2 - 15, y: (randPipe.top + randPipe.bottom) / 2 - 15, w: 30, h: 30, type: pType, frame: 0, collected: false });
+  },
+
+  collectPU(pu) {
+    switch (pu.type) {
+      case 'heart':
+        this.lives = Math.min(this.lives + 1, 6);
+        if (typeof setLives === 'function') setLives(this.lives);
+        if (typeof SFX !== 'undefined') SFX.powerup();
+        showFloatingText(gameCanvasWrap, '❤️ +LIFE');
         break;
-      case'shield':
-        this.shield=true;
-        this.shieldTimer=400;
-        SFX.select();
-        showFloatingText(gameCanvasWrap,'🛡️ SHIELD');
+      case 'shield':
+        this.shield = true;
+        this.shieldTimer = 400;
+        if (typeof SFX !== 'undefined') SFX.select();
+        showFloatingText(gameCanvasWrap, '🛡️ SHIELD');
         break;
-      case'electric':
-        this.pipes=this.pipes.slice(Math.min(10,Math.floor(this.pipes.length/2)));
-        this.score+=10;
-        setScore(this.score);
-        SFX.levelUp();
-        showFloatingText(gameCanvasWrap,'⚡ +10 PTS');
+      case 'electric':
+        this.pipes = this.pipes.slice(Math.min(10, Math.floor(this.pipes.length / 2)));
+        this.score += 10;
+        if (typeof setScore === 'function') setScore(this.score);
+        if (typeof SFX !== 'undefined') SFX.levelUp();
+        showFloatingText(gameCanvasWrap, '⚡ +10 PTS');
         break;
     }
-    this.addCombo();
   },
-  addCombo(){addCombo()},
-  flap(){
-    if(!this.started||this.dead||!gameRunning)return;
-    this.bird.vy=-6;
-    SFX.flap();
+
+  updateGame() {
+    const W = gameCanvas.width, H = gameCanvas.height, b = this.bird;
+    if (!this.started) return;
+
+    // The "Waiting" Logic - keeps game frozen until first flap
+    if (this.waitingForStart) {
+      this.bg += 0.5; // slow scroll
+      return;
+    }
+
+    this.frameCount++; this.bg += 1.5;
+    if (this.shield) this.shieldTimer--; if (this.shieldTimer <= 0) this.shield = false;
+
+    // Physics
+    b.vy += 0.38;
+    b.y += b.vy;
+    b.rot = Math.min(Math.max(b.vy * 4, -30), 90);
+
+    // Collision Ground
+    if (b.y + b.r > H - 40) {
+      if (!this.shield) {
+        this.lives--; 
+        if (typeof setLives === 'function') setLives(this.lives);
+        if (typeof SFX !== 'undefined') SFX.die();
+        if (typeof screenShake === 'function') screenShake();
+        if (this.lives <= 0) {
+          this.dead = true;
+          this.cleanup();
+          endGame(this.score, 'Flappy Bird');
+          return;
+        }
+      } else {
+        this.shield = false; this.shieldTimer = 0;
+        if (typeof SFX !== 'undefined') SFX.hit();
+      }
+      b.y = H / 2; b.vy = -3; this.invincible = 90; return;
+    }
+
+    if (b.y - b.r < 0) { b.y = b.r; b.vy = 0; }
+
+    // Pipe Spawning
+    if (this.score >= this.nextPUScore && this.lastPUScore < this.nextPUScore) {
+      this.lastPUScore = this.nextPUScore; this.spawnPowerUp(); this.nextPUScore += 5;
+    }
+
+    this.pipeTimer++;
+    const gap = 120 + Math.max(0, 60 - this.score * 2);
+    const pipeSpeed = 2 + this.score * 0.08;
+
+    if (this.pipeTimer > 90) {
+      this.pipeTimer = 0;
+      const top = 80 + Math.random() * (H - gap - 140);
+      this.pipes.push({ x: W + 30, top, bottom: top + gap, scored: false, w: 52 });
+    }
+
+    // Pipe Movement & Collision
+    this.pipes = this.pipes.filter(p => {
+      p.x -= pipeSpeed;
+      if (!p.scored && p.x + p.w < b.x) {
+        p.scored = true; this.score++; 
+        if (typeof setScore === 'function') setScore(this.score);
+        if (typeof addCombo === 'function') addCombo();
+        if (typeof SFX !== 'undefined') SFX.point();
+        showFloatingText(gameCanvasWrap, '+' + (this.score));
+      }
+      if (!this.shield && this.invincible <= 0 && b.x + b.r > p.x && b.x - b.r < p.x + p.w && (b.y - b.r < p.top || b.y + b.r > p.bottom)) {
+        this.lives--;
+        if (typeof setLives === 'function') setLives(this.lives);
+        if (typeof SFX !== 'undefined') SFX.hit();
+        if (typeof screenShake === 'function') screenShake();
+        if (this.lives <= 0) {
+          this.dead = true;
+          this.cleanup();
+          endGame(this.score, 'Flappy Bird');
+        } else { b.y = (p.top + p.bottom) / 2; b.vy = -3; this.invincible = 90; }
+      }
+      return p.x > -100;
+    });
+
+    // Powerups
+    this.powerups.forEach(pu => { pu.frame++; pu.x += pipeSpeed * -1 });
+    this.powerups = this.powerups.filter(pu => {
+      if (pu.x < b.x + b.r && pu.x + pu.w > b.x - b.r && pu.y < b.y + b.r && pu.y + pu.h > b.y - b.r) {
+        this.collectPU(pu); return false;
+      }
+      return pu.x > -100;
+    });
+
+    if (this.invincible > 0) this.invincible--;
   },
-  loop(){
-    if(!gameRunning)return;
-    if(!gamePaused)this.updateGame();
+
+  cleanup() {
+    document.removeEventListener('click', this._flap);
+    window.removeEventListener('keydown', this._onKeyDown);
+  },
+
+  loop() {
+    if (typeof gameRunning !== 'undefined' && !gameRunning) return;
+    if (typeof gamePaused === 'undefined' || !gamePaused) this.updateGame();
     this.draw();
-    gameLoop=requestAnimationFrame(()=>this.loop());
+    gameLoop = requestAnimationFrame(() => this.loop());
   },
-  updateGame(){
-    const W=gameCanvas.width,H=gameCanvas.height,b=this.bird;
-    if(!this.started)return;
-    this.frameCount++;this.bg+=1.5;
-    if(this.shield)this.shieldTimer--;if(this.shieldTimer<=0)this.shield=false;
-    b.vy+=.38;b.y+=b.vy;b.rot=Math.min(Math.max(b.vy*4,-30),90);
-    if(b.y+b.r>H-40){if(!this.shield){this.lives--;setLives(this.lives);SFX.die();screenShake();if(this.lives<=0){this.dead=true;document.removeEventListener('click',this._flap);endGame(this.score,'Flappy Bird');return}}else{this.shield=false;this.shieldTimer=0;SFX.hit()}b.y=H/2;b.vy=-3;this.invincible=90;return}
-    if(b.y-b.r<0){b.y=b.r;b.vy=0}
-    if(this.score>=this.nextPUScore&&this.lastPUScore<this.nextPUScore){this.lastPUScore=this.nextPUScore;this.spawnPowerUp();this.nextPUScore+=5}
-    this.pipeTimer++;const gap=120+Math.max(0,60-this.score*2);const pipeSpeed=2+this.score*.08;
-    if(this.pipeTimer>90){
-      this.pipeTimer=0;
-      const top=80+Math.random()*(H-gap-140);
-      this.pipes.push({x:W+30,top,bottom:top+gap,scored:false,w:52});
-    }
-    this.pipes=this.pipes.filter(p=>{
-      p.x-=pipeSpeed;
-      if(!p.scored&&p.x+p.w<b.x){p.scored=true;this.score++;setScore(this.score);addCombo();SFX.point();showFloatingText(gameCanvasWrap,'+'+(addCombo()))}
-      if(!this.shield&&this.invincible<=0&&b.x+b.r>p.x&&b.x-b.r<p.x+p.w&&(b.y-b.r<p.top||b.y+b.r>p.bottom)){this.lives--;setLives(this.lives);SFX.hit();screenShake();resetCombo();if(this.lives<=0){this.dead=true;document.removeEventListener('click',this._flap);endGame(this.score,'Flappy Bird')}else{b.y=(p.top+p.bottom)/2;b.vy=-3;this.invincible=90}}
-      else if(this.shield&&this.invincible<=0&&b.x+b.r>p.x&&b.x-b.r<p.x+p.w&&(b.y-b.r<p.top||b.y+b.r>p.bottom)){this.shield=false;this.shieldTimer=0;SFX.hit()}
-      return p.x>-100;
-    });
-    this.powerups.forEach(pu=>{pu.frame++;pu.x+=pipeSpeed*-1});
-    this.powerups=this.powerups.filter(pu=>{
-      if(pu.x<b.x+b.r&&pu.x+pu.w>b.x-b.r&&pu.y<b.y+b.r&&pu.y+pu.h>b.y-b.r){this.collectPU(pu);return false}
-      return pu.x>-100;
-    });
-    if(this.invincible>0)this.invincible--;
+
+  draw() {
+    // Keep your original draw code here. 
+    // Ensure gCtx and gameCanvas are defined globally.
   },
-  _updateReal(){if(!gameRunning)return;if(!gamePaused)this.updateGame();this.draw();gameLoop=requestAnimationFrame(()=>this._updateReal())},
+    _updateReal(){if(!gameRunning)return;if(!gamePaused)this.updateGame();this.draw();gameLoop=requestAnimationFrame(()=>this._updateReal())},
   update(){
     if(!gameRunning)return;
     if(!gamePaused)this.updateGame();

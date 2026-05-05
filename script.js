@@ -333,6 +333,7 @@ function renderAchievements(){
 }
 function showAchievementPopup(ach) {
   SFX.levelUp();
+  spawnConfetti();
   const container = document.getElementById('achievement-toast-container');
   if (!container) return;
   const toast = document.createElement('div');

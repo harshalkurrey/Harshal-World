@@ -106,6 +106,21 @@
       <div class="hero-stats">
         <div class="stat-chip"><strong id="statGames">0</strong>Games Played</div>
         <div class="stat-chip"><strong id="statCombo">0</strong>Best Combo</div>
+        <div class="stat-chip"><strong id="statCoins">0</strong>🪙 Coins</div>
+      </div>
+    </div>
+    <!-- Daily Challenge -->
+    <div class="daily-challenge-card" id="dailyChallengeCard">
+      <div class="daily-challenge-header">
+        <div class="daily-challenge-title">🎯 DAILY CHALLENGE</div>
+        <div class="daily-challenge-reward">+50 🪙</div>
+      </div>
+      <div class="daily-challenge-content">
+        <div class="daily-challenge-task">
+          <div class="task-check" id="taskCheck">✅</div>
+          <div class="task-text">Daily Reward Available</div>
+        </div>
+        <button class="claim-reward-btn" id="claimRewardBtn" disabled>🎁 COLLECT REWARDS</button>
       </div>
     </div>
     <div class="hub-controls">
@@ -129,9 +144,9 @@
     </div>
 
 
-    <!-- Games Grid -->
-    <div class="section-title">ARCADE GAMES</div>
-    <div class="games-grid" id="gamesGrid">
+    <!-- Games Sections -->
+    <div class="section-title">POPULAR & MOST PLAYED GAMES</div>
+    <div class="games-grid" id="popularGamesGrid">
       <div class="game-card" data-game="space" data-category="action">
         <div class="game-banner banner-space">🚀<span style="position:absolute;font-size:1rem;bottom:8px;left:10px;opacity:.5">⚡💥🔱</span></div>
         <div class="game-card-info">
@@ -150,21 +165,25 @@
           <button class="play-now-btn">▶ PLAY NOW</button>
         </div>
       </div>
-      <div class="game-card" data-game="asteroid" data-category="action">
-        <div class="game-banner banner-asteroid">☄️<span style="position:absolute;font-size:1rem;bottom:8px;left:10px;opacity:.5">🌌🪐✨</span></div>
-        <div class="game-card-info">
-          <div class="game-name">ASTEROID DODGE</div>
-          <div class="game-desc">Dodge spinning rocks. Speed increases over time.</div>
-          <div class="game-best">BEST: <span class="best-score" data-game="asteroid">0</span></div>
-          <button class="play-now-btn">▶ PLAY NOW</button>
-        </div>
-      </div>
       <div class="game-card" data-game="whack" data-category="arcade">
         <div class="game-banner banner-whack">🐻<span style="position:absolute;font-size:1rem;bottom:8px;left:10px;opacity:.5">🔨💥⭐</span></div>
         <div class="game-card-info">
           <div class="game-name">WHACK A BEAR</div>
           <div class="game-desc">60 seconds. Click those bears before they hide!</div>
           <div class="game-best">BEST: <span class="best-score" data-game="whack">0</span></div>
+          <button class="play-now-btn">▶ PLAY NOW</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="section-title">ALL GAMES</div>
+    <div class="games-grid" id="allGamesGrid">
+      <div class="game-card" data-game="asteroid" data-category="action">
+        <div class="game-banner banner-asteroid">☄️<span style="position:absolute;font-size:1rem;bottom:8px;left:10px;opacity:.5">🌌🪐✨</span></div>
+        <div class="game-card-info">
+          <div class="game-name">ASTEROID DODGE</div>
+          <div class="game-desc">Dodge spinning rocks. Speed increases over time.</div>
+          <div class="game-best">BEST: <span class="best-score" data-game="asteroid">0</span></div>
           <button class="play-now-btn">▶ PLAY NOW</button>
         </div>
       </div>
@@ -186,7 +205,6 @@
           <button class="play-now-btn">▶ PLAY NOW</button>
         </div>
       </div>
-
     </div>
 
     <!-- SPIN WHEEL MODAL -->

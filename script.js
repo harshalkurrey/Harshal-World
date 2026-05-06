@@ -13,8 +13,13 @@ const STATE = {
   leaderboard: [],
   emojiAvatar: '🎮',
   theme: 'default',
+  coins: 0,
+  dailyChallenge: {
+    lastCompleted: null,
+    progress: 0,
+    claimed: false
+  }
   
-
 };
 const ACHIEVEMENTS_LIST = [
   { id: 'arcade_rookie', name: 'Arcade Rookie', desc: 'Play 10 total games.', icon: '🕹️' },
@@ -227,6 +232,12 @@ function saveState(){localStorage.setItem('hw_state',JSON.stringify(STATE))}
 function loadState(){
   const s=localStorage.getItem('hw_state');
   if(s){const d=JSON.parse(s);Object.assign(STATE,d)}
+  // Reset daily challenge if it's a new day
+  const today = new Date().toDateString();
+  if (STATE.dailyChallenge.lastCompleted !== today) {
+    STATE.dailyChallenge.progress = 0;
+    STATE.dailyChallenge.claimed = false;
+  }
 }
 loadState();
 
@@ -288,6 +299,7 @@ function loadHub(){
   document.getElementById('xpNext').textContent=nextRank?(rank.max-STATE.xp)+' XP to '+nextRank.name:'MAX RANK 🏆';
   document.getElementById('statGames').textContent=STATE.gamesPlayed;
   document.getElementById('statCombo').textContent=STATE.bestCombo+'x';
+  document.getElementById('statCoins').textContent=STATE.coins;
   document.getElementById('totalScore').textContent=STATE.totalScore;
   document.getElementById('totalGames').textContent=STATE.gamesPlayed;
   document.getElementById('bestCombo').textContent=STATE.bestCombo+'x';
@@ -301,6 +313,7 @@ function loadHub(){
   document.getElementById('soundToggleNav').textContent=STATE.soundOn?'🔊':'🔇';
   document.getElementById('volumeSlider').value=STATE.volume;
   applyTheme(STATE.theme || "default");
+  updateDailyChallengeUI();
 }
 function renderLeaderboard(){
   const list=document.getElementById('leaderboardList');list.innerHTML='';
@@ -388,6 +401,78 @@ function addXp(amount){
   checkAchievements();
 }
 
+// Daily Challenge Functions
+function markDailyChallengeProgress() {
+  // No longer needed since there's no task requirement
+}
+
+function canClaimDailyReward() {
+  const today = new Date().toDateString();
+  return STATE.dailyChallenge.lastCompleted !== today && !STATE.dailyChallenge.claimed;
+}
+
+function updateDailyChallengeUI() {
+  const taskCheck = document.getElementById('taskCheck');
+  const claimBtn = document.getElementById('claimRewardBtn');
+  if (taskCheck && claimBtn) {
+    const canClaim = canClaimDailyReward();
+    // Always show as completed since there's no task requirement
+    taskCheck.textContent = '✅';
+    taskCheck.style.color = '#10B981';
+    claimBtn.disabled = !canClaim;
+    // Ensure event listener is attached only once
+    if (!claimBtn.hasAttribute('data-listener-attached')) {
+      claimBtn.addEventListener('click', claimDailyReward);
+      claimBtn.setAttribute('data-listener-attached', 'true');
+    }
+  }
+}
+
+function claimDailyReward() {
+  if (!canClaimDailyReward()) {
+    showToast('❌ Complete the task first!', 'error');
+    return;
+  }
+  STATE.coins += 50;
+  STATE.dailyChallenge.claimed = true;
+  STATE.dailyChallenge.lastCompleted = new Date().toDateString();
+  STATE.dailyChallenge.progress = 0; // Reset for next day
+  saveState();
+  updateDailyChallengeUI();
+  loadHub(); // Update coins display
+  // Show popup or notification
+  showToast('🎉 Daily Reward Claimed! +50 Coins', 'success');
+}
+
+function showToast(message, type = 'info') {
+  // Simple toast implementation
+  const toast = document.createElement('div');
+  toast.style.position = 'fixed';
+  toast.style.top = '20px';
+  toast.style.right = '20px';
+  toast.style.color = 'white';
+  toast.style.padding = '1rem';
+  toast.style.borderRadius = '8px';
+  toast.style.zIndex = '1000';
+  toast.style.fontFamily = 'Nunito, sans-serif';
+  toast.textContent = message;
+  
+  // Set background color based on type
+  if (type === 'success') {
+    toast.style.background = '#10B981';
+  } else if (type === 'error') {
+    toast.style.background = '#EF4444';
+  } else {
+    toast.style.background = '#6B7280'; // Default gray for info
+  }
+  
+  document.body.appendChild(toast);
+  setTimeout(() => {
+    toast.style.opacity = '0';
+    setTimeout(() => toast.remove(), 300);
+  }, 3000);
+}
+
 // ===== SETTINGS =====
 document.getElementById('settingsBtn').onclick=()=>{
   document.getElementById('settingsOverlay').classList.remove('hidden');
@@ -425,20 +510,23 @@ document.getElementById('resetScores').onclick=()=>{
 };
 
 // ===== GAME LAUNCH =====
-document.getElementById('gamesGrid').addEventListener('click',e=>{
+document.getElementById('popularGamesGrid').addEventListener('click', handleGameClick);
+document.getElementById('allGamesGrid').addEventListener('click', handleGameClick);
+
+function handleGameClick(e) {
   // Only trigger if clicking the Play Now button, not the entire card
-  const btn=e.target.closest('.play-now-btn');
-  if(!btn)return;
+  const btn = e.target.closest('.play-now-btn');
+  if (!btn) return;
   
-  const card=btn.closest('.game-card');
-  if(!card)return;
+  const card = btn.closest('.game-card');
+  if (!card) return;
   
-  const game=card.dataset.game;
-  if(!game||card.classList.contains('locked'))return;
+  const game = card.dataset.game;
+  if (!game || card.classList.contains('locked')) return;
   
   SFX.select();
   launchGame(game);
-});
+}
 document.getElementById('backToHub').onclick=()=>{stopGame();showMobileControls('');showScreen('hub-screen');loadHub()};
 document.getElementById('pauseBtn').onclick=togglePause;
 document.getElementById('resumeBtn').onclick=togglePause;

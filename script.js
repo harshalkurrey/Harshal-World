@@ -495,20 +495,41 @@ document.getElementById('soundToggleNav').onclick=()=>document.getElementById('s
 document.getElementById('themeToggleNav').onclick=()=>{
   cycleTheme();
 };
-document.getElementById('volumeSlider').oninput=function(){STATE.volume=+this.value;saveState()};
-document.getElementById('saveName').onclick=()=>{
-  const n=document.getElementById('settingsName').value.trim();
-  if(n){STATE.name=n;saveState();loadHub();SFX.select()}
-};
-document.getElementById('resetScores').onclick=()=>{
-  if(confirm('Reset all scores and XP? This cannot be undone.')){
-    STATE.xp=0;STATE.gamesPlayed=0;STATE.bestCombo=0;STATE.totalScore=0;
-    STATE.bestScores={space:0,flappy:0,asteroid:0,whack:0,dino:0,zombie:0};STATE.leaderboard=[];
-    STATE.achievements=[];
-    saveState();loadHub();SFX.hit();
-  }
-};
+const volumeSlider = document.getElementById('volumeSlider');
+const volumeValue = document.getElementById('volumeValue');
 
+// Set initial value
+volumeValue.textContent = Math.round(volumeSlider.value * 100) + '%';
+
+volumeSlider.oninput = function () {
+  STATE.volume = +this.value;
+  saveState();
+
+  // 👇 ADD THIS
+  const percent = Math.round(this.value * 100);
+  volumeValue.textContent = percent + '%';
+};
+document.getElementById('resetScores').onclick = () => {
+  const confirmReset = confirm(
+    "⚠️ Are you sure you want to reset ALL scores, XP, achievements, and progress?\n\nThis action is permanent and cannot be undone."
+  );
+
+  if (!confirmReset) return;
+
+  STATE.xp = 0;
+  STATE.gamesPlayed = 0;
+  STATE.bestCombo = 0;
+  STATE.totalScore = 0;
+  STATE.bestScores = {space:0,flappy:0,asteroid:0,whack:0,dino:0,zombie:0};
+  STATE.leaderboard = [];
+  STATE.achievements = [];
+
+  saveState();
+  loadHub();
+  SFX.hit();
+
+  alert("✅ All progress has been reset.");
+};
 // ===== GAME LAUNCH =====
 document.getElementById('popularGamesGrid').addEventListener('click', handleGameClick);
 document.getElementById('allGamesGrid').addEventListener('click', handleGameClick);

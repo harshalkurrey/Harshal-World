@@ -13,8 +13,13 @@ const STATE = {
   leaderboard: [],
   emojiAvatar: '🎮',
   theme: 'default',
+  coins: 0,
+  dailyChallenge: {
+    lastCompleted: null,
+    progress: 0,
+    claimed: false
+  }
   
-
 };
 const ACHIEVEMENTS_LIST = [
   { id: 'arcade_rookie', name: 'Arcade Rookie', desc: 'Play 10 total games.', icon: '🕹️' },
@@ -227,6 +232,12 @@ function saveState(){localStorage.setItem('hw_state',JSON.stringify(STATE))}
 function loadState(){
   const s=localStorage.getItem('hw_state');
   if(s){const d=JSON.parse(s);Object.assign(STATE,d)}
+  // Reset daily challenge if it's a new day
+  const today = new Date().toDateString();
+  if (STATE.dailyChallenge.lastCompleted !== today) {
+    STATE.dailyChallenge.progress = 0;
+    STATE.dailyChallenge.claimed = false;
+  }
 }
 loadState();
 
@@ -288,6 +299,7 @@ function loadHub(){
   document.getElementById('xpNext').textContent=nextRank?(rank.max-STATE.xp)+' XP to '+nextRank.name:'MAX RANK 🏆';
   document.getElementById('statGames').textContent=STATE.gamesPlayed;
   document.getElementById('statCombo').textContent=STATE.bestCombo+'x';
+  document.getElementById('statCoins').textContent=STATE.coins;
   document.getElementById('totalScore').textContent=STATE.totalScore;
   document.getElementById('totalGames').textContent=STATE.gamesPlayed;
   document.getElementById('bestCombo').textContent=STATE.bestCombo+'x';
@@ -301,6 +313,7 @@ function loadHub(){
   document.getElementById('soundToggleNav').textContent=STATE.soundOn?'🔊':'🔇';
   document.getElementById('volumeSlider').value=STATE.volume;
   applyTheme(STATE.theme || "default");
+  updateDailyChallengeUI();
 }
 function renderLeaderboard(){
   const list=document.getElementById('leaderboardList');list.innerHTML='';
@@ -333,6 +346,7 @@ function renderAchievements(){
 }
 function showAchievementPopup(ach) {
   SFX.levelUp();
+  spawnConfetti();
   const container = document.getElementById('achievement-toast-container');
   if (!container) return;
   const toast = document.createElement('div');
@@ -387,6 +401,78 @@ function addXp(amount){
   checkAchievements();
 }
 
+// Daily Challenge Functions
+function markDailyChallengeProgress() {
+  // No longer needed since there's no task requirement
+}
+
+function canClaimDailyReward() {
+  const today = new Date().toDateString();
+  return STATE.dailyChallenge.lastCompleted !== today && !STATE.dailyChallenge.claimed;
+}
+
+function updateDailyChallengeUI() {
+  const taskCheck = document.getElementById('taskCheck');
+  const claimBtn = document.getElementById('claimRewardBtn');
+  if (taskCheck && claimBtn) {
+    const canClaim = canClaimDailyReward();
+    // Always show as completed since there's no task requirement
+    taskCheck.textContent = '✅';
+    taskCheck.style.color = '#10B981';
+    claimBtn.disabled = !canClaim;
+    // Ensure event listener is attached only once
+    if (!claimBtn.hasAttribute('data-listener-attached')) {
+      claimBtn.addEventListener('click', claimDailyReward);
+      claimBtn.setAttribute('data-listener-attached', 'true');
+    }
+  }
+}
+
+function claimDailyReward() {
+  if (!canClaimDailyReward()) {
+    showToast('❌ Complete the task first!', 'error');
+    return;
+  }
+  STATE.coins += 50;
+  STATE.dailyChallenge.claimed = true;
+  STATE.dailyChallenge.lastCompleted = new Date().toDateString();
+  STATE.dailyChallenge.progress = 0; // Reset for next day
+  saveState();
+  updateDailyChallengeUI();
+  loadHub(); // Update coins display
+  // Show popup or notification
+  showToast('🎉 Daily Reward Claimed! +50 Coins', 'success');
+}
+
+function showToast(message, type = 'info') {
+  // Simple toast implementation
+  const toast = document.createElement('div');
+  toast.style.position = 'fixed';
+  toast.style.top = '20px';
+  toast.style.right = '20px';
+  toast.style.color = 'white';
+  toast.style.padding = '1rem';
+  toast.style.borderRadius = '8px';
+  toast.style.zIndex = '1000';
+  toast.style.fontFamily = 'Nunito, sans-serif';
+  toast.textContent = message;
+  
+  // Set background color based on type
+  if (type === 'success') {
+    toast.style.background = '#10B981';
+  } else if (type === 'error') {
+    toast.style.background = '#EF4444';
+  } else {
+    toast.style.background = '#6B7280'; // Default gray for info
+  }
+  
+  document.body.appendChild(toast);
+  setTimeout(() => {
+    toast.style.opacity = '0';
+    setTimeout(() => toast.remove(), 300);
+  }, 3000);
+}
+
 // ===== SETTINGS =====
 document.getElementById('settingsBtn').onclick=()=>{
   document.getElementById('settingsOverlay').classList.remove('hidden');
@@ -409,35 +495,59 @@ document.getElementById('soundToggleNav').onclick=()=>document.getElementById('s
 document.getElementById('themeToggleNav').onclick=()=>{
   cycleTheme();
 };
-document.getElementById('volumeSlider').oninput=function(){STATE.volume=+this.value;saveState()};
-document.getElementById('saveName').onclick=()=>{
-  const n=document.getElementById('settingsName').value.trim();
-  if(n){STATE.name=n;saveState();loadHub();SFX.select()}
-};
-document.getElementById('resetScores').onclick=()=>{
-  if(confirm('Reset all scores and XP? This cannot be undone.')){
-    STATE.xp=0;STATE.gamesPlayed=0;STATE.bestCombo=0;STATE.totalScore=0;
-    STATE.bestScores={space:0,flappy:0,asteroid:0,whack:0,dino:0,zombie:0};STATE.leaderboard=[];
-    STATE.achievements=[];
-    saveState();loadHub();SFX.hit();
-  }
-};
+const volumeSlider = document.getElementById('volumeSlider');
+const volumeValue = document.getElementById('volumeValue');
 
+// Set initial value
+volumeValue.textContent = Math.round(volumeSlider.value * 100) + '%';
+
+volumeSlider.oninput = function () {
+  STATE.volume = +this.value;
+  saveState();
+
+  // 👇 ADD THIS
+  const percent = Math.round(this.value * 100);
+  volumeValue.textContent = percent + '%';
+};
+document.getElementById('resetScores').onclick = () => {
+  const confirmReset = confirm(
+    "⚠️ Are you sure you want to reset ALL scores, XP, achievements, and progress?\n\nThis action is permanent and cannot be undone."
+  );
+
+  if (!confirmReset) return;
+
+  STATE.xp = 0;
+  STATE.gamesPlayed = 0;
+  STATE.bestCombo = 0;
+  STATE.totalScore = 0;
+  STATE.bestScores = {space:0,flappy:0,asteroid:0,whack:0,dino:0,zombie:0};
+  STATE.leaderboard = [];
+  STATE.achievements = [];
+
+  saveState();
+  loadHub();
+  SFX.hit();
+
+  alert("✅ All progress has been reset.");
+};
 // ===== GAME LAUNCH =====
-document.getElementById('gamesGrid').addEventListener('click',e=>{
+document.getElementById('popularGamesGrid').addEventListener('click', handleGameClick);
+document.getElementById('allGamesGrid').addEventListener('click', handleGameClick);
+
+function handleGameClick(e) {
   // Only trigger if clicking the Play Now button, not the entire card
-  const btn=e.target.closest('.play-now-btn');
-  if(!btn)return;
+  const btn = e.target.closest('.play-now-btn');
+  if (!btn) return;
   
-  const card=btn.closest('.game-card');
-  if(!card)return;
+  const card = btn.closest('.game-card');
+  if (!card) return;
   
-  const game=card.dataset.game;
-  if(!game||card.classList.contains('locked'))return;
+  const game = card.dataset.game;
+  if (!game || card.classList.contains('locked')) return;
   
   SFX.select();
   launchGame(game);
-});
+}
 document.getElementById('backToHub').onclick=()=>{stopGame();showMobileControls('');showScreen('hub-screen');loadHub()};
 document.getElementById('pauseBtn').onclick=togglePause;
 document.getElementById('resumeBtn').onclick=togglePause;
@@ -1163,91 +1273,208 @@ GAMES.space={
 // ============================================================
 // FLAPPY BIRD
 // ============================================================
-GAMES.flappy={
-  bird:null,pipes:[],score:0,started:false,dead:false,frameCount:0,bg:0,lives:3,invincible:0,powerups:[],shield:false,shieldTimer:0,nextPUScore:5,lastPUScore:0,
-  start(){
-    const W=gameCanvas.width,H=gameCanvas.height;
-    this.bird={x:W*0.22,y:H/2,vy:0,r:14,rot:0};
-    this.pipes=[];this.score=0;this.started=false;this.dead=false;this.frameCount=0;this.bg=0;this.pipeTimer=0;this.lives=3;this.invincible=0;this.powerups=[];this.shield=false;this.shieldTimer=0;this.nextPUScore=5;this.lastPUScore=0;
-    setScore(0);setLives(3);resetCombo();
-    document.getElementById('flappyTutorial').classList.remove('hidden');
-    document.getElementById('flappyTutorialBtn').onclick=()=>{document.getElementById('flappyTutorial').classList.add('hidden');this.started=true;gameLoop=requestAnimationFrame(()=>this.loop())};
-    document.addEventListener('click',this._flap=()=>this.flap(),{once:false});
+// ============================================================
+// FLAPPY BIRD - STABLE MERGED VERSION
+// ============================================================
+GAMES.flappy = {
+  bird: null, pipes: [], score: 0, started: false, dead: false, frameCount: 0, bg: 0, lives: 3, invincible: 0, powerups: [], shield: false, shieldTimer: 0, nextPUScore: 5, lastPUScore: 0,
+  waitingForStart: true, // Prevents instant falling
+
+  start() {
+    const W = gameCanvas.width, H = gameCanvas.height;
+    // Reset all variables
+    this.bird = { x: W * 0.22, y: H / 2, vy: 0, r: 14, rot: 0 };
+    this.pipes = []; this.score = 0; this.started = false; this.dead = false; 
+    this.frameCount = 0; this.bg = 0; this.pipeTimer = 0; this.lives = 3; 
+    this.invincible = 0; this.powerups = []; this.shield = false; 
+    this.shieldTimer = 0; this.nextPUScore = 5; this.lastPUScore = 0;
+    this.waitingForStart = true; 
+
+    // UI Updates
+    if (typeof setScore === 'function') setScore(0);
+    if (typeof setLives === 'function') setLives(3);
+    if (typeof resetCombo === 'function') resetCombo();
+
+    // Tutorial handling
+    const tutorial = document.getElementById('flappyTutorial');
+    if (tutorial) tutorial.classList.remove('hidden');
+
+    document.getElementById('flappyTutorialBtn').onclick = () => {
+      if (tutorial) tutorial.classList.add('hidden');
+      if (typeof gameRunning !== 'undefined') gameRunning = true;
+      this.started = true;
+      
+      // Start the loop
+      requestAnimationFrame(() => this.loop());
+    };
+
+    // Input Listeners
+    document.addEventListener('click', this._flap = () => this.handleInput(), { once: false });
+    
+    // Named reference for keydown so we can remove it later
+    this._onKeyDown = (e) => {
+      if (e.code === 'Space') {
+        e.preventDefault(); // Prevent page scrolling
+        this.handleInput();
+      }
+    };
+    window.addEventListener('keydown', this._onKeyDown);
   },
-  spawnPowerUp(type){
-    const W=gameCanvas.width,H=gameCanvas.height;
-    const validTypes=['heart','shield','electric'];
-    const pType=validTypes.includes(type)?type:validTypes[Math.floor(Math.random()*validTypes.length)];
-    const randPipe=this.pipes[Math.floor(Math.random()*Math.min(3,this.pipes.length))];
-    if(!randPipe)return;
-    this.powerups.push({x:randPipe.x+randPipe.w/2-15,y:(randPipe.top+randPipe.bottom)/2-15,w:30,h:30,type:pType,frame:0,collected:false});
+
+  handleInput() {
+    if (this.waitingForStart && this.started) {
+      this.waitingForStart = false;
+    }
+    this.flap();
   },
-  collectPU(pu){
-    switch(pu.type){
-      case'heart':
-        this.lives=Math.min(this.lives+1,6);
-        setLives(this.lives);
-        SFX.powerup();
-        showFloatingText(gameCanvasWrap,'❤️ +LIFE');
+
+  flap() {
+    if (!this.started || this.dead || (typeof gamePaused !== 'undefined' && gamePaused)) return;
+    this.bird.vy = -6; // Original velocity
+    if (typeof SFX !== 'undefined' && SFX.flap) SFX.flap();
+  },
+
+  spawnPowerUp(type) {
+    const W = gameCanvas.width, H = gameCanvas.height;
+    const validTypes = ['heart', 'shield', 'electric'];
+    const pType = validTypes.includes(type) ? type : validTypes[Math.floor(Math.random() * validTypes.length)];
+    const randPipe = this.pipes[Math.floor(Math.random() * Math.min(3, this.pipes.length))];
+    if (!randPipe) return;
+    this.powerups.push({ x: randPipe.x + randPipe.w / 2 - 15, y: (randPipe.top + randPipe.bottom) / 2 - 15, w: 30, h: 30, type: pType, frame: 0, collected: false });
+  },
+
+  collectPU(pu) {
+    switch (pu.type) {
+      case 'heart':
+        this.lives = Math.min(this.lives + 1, 6);
+        if (typeof setLives === 'function') setLives(this.lives);
+        if (typeof SFX !== 'undefined') SFX.powerup();
+        showFloatingText(gameCanvasWrap, '❤️ +LIFE');
         break;
-      case'shield':
-        this.shield=true;
-        this.shieldTimer=400;
-        SFX.select();
-        showFloatingText(gameCanvasWrap,'🛡️ SHIELD');
+      case 'shield':
+        this.shield = true;
+        this.shieldTimer = 400;
+        if (typeof SFX !== 'undefined') SFX.select();
+        showFloatingText(gameCanvasWrap, '🛡️ SHIELD');
         break;
-      case'electric':
-        this.pipes=this.pipes.slice(Math.min(10,Math.floor(this.pipes.length/2)));
-        this.score+=10;
-        setScore(this.score);
-        SFX.levelUp();
-        showFloatingText(gameCanvasWrap,'⚡ +10 PTS');
+      case 'electric':
+        this.pipes = this.pipes.slice(Math.min(10, Math.floor(this.pipes.length / 2)));
+        this.score += 10;
+        if (typeof setScore === 'function') setScore(this.score);
+        if (typeof SFX !== 'undefined') SFX.levelUp();
+        showFloatingText(gameCanvasWrap, '⚡ +10 PTS');
         break;
     }
-    this.addCombo();
   },
-  addCombo(){addCombo()},
-  flap(){
-    if(!this.started||this.dead||!gameRunning)return;
-    this.bird.vy=-6;
-    SFX.flap();
+
+  updateGame() {
+    const W = gameCanvas.width, H = gameCanvas.height, b = this.bird;
+    if (!this.started) return;
+
+    // The "Waiting" Logic - keeps game frozen until first flap
+    if (this.waitingForStart) {
+      this.bg += 0.5; // slow scroll
+      return;
+    }
+
+    this.frameCount++; this.bg += 1.5;
+    if (this.shield) this.shieldTimer--; if (this.shieldTimer <= 0) this.shield = false;
+
+    // Physics
+    b.vy += 0.38;
+    b.y += b.vy;
+    b.rot = Math.min(Math.max(b.vy * 4, -30), 90);
+
+    // Collision Ground
+    if (b.y + b.r > H - 40) {
+      if (!this.shield) {
+        this.lives--; 
+        if (typeof setLives === 'function') setLives(this.lives);
+        if (typeof SFX !== 'undefined') SFX.die();
+        if (typeof screenShake === 'function') screenShake();
+        if (this.lives <= 0) {
+          this.dead = true;
+          this.cleanup();
+          endGame(this.score, 'Flappy Bird');
+          return;
+        }
+      } else {
+        this.shield = false; this.shieldTimer = 0;
+        if (typeof SFX !== 'undefined') SFX.hit();
+      }
+      b.y = H / 2; b.vy = -3; this.invincible = 90; return;
+    }
+
+    if (b.y - b.r < 0) { b.y = b.r; b.vy = 0; }
+
+    // Pipe Spawning
+    if (this.score >= this.nextPUScore && this.lastPUScore < this.nextPUScore) {
+      this.lastPUScore = this.nextPUScore; this.spawnPowerUp(); this.nextPUScore += 5;
+    }
+
+    this.pipeTimer++;
+    const gap = 120 + Math.max(0, 60 - this.score * 2);
+    const pipeSpeed = 2 + this.score * 0.08;
+
+    if (this.pipeTimer > 90) {
+      this.pipeTimer = 0;
+      const top = 80 + Math.random() * (H - gap - 140);
+      this.pipes.push({ x: W + 30, top, bottom: top + gap, scored: false, w: 52 });
+    }
+
+    // Pipe Movement & Collision
+    this.pipes = this.pipes.filter(p => {
+      p.x -= pipeSpeed;
+      if (!p.scored && p.x + p.w < b.x) {
+        p.scored = true; this.score++; 
+        if (typeof setScore === 'function') setScore(this.score);
+        if (typeof addCombo === 'function') addCombo();
+        if (typeof SFX !== 'undefined') SFX.point();
+        showFloatingText(gameCanvasWrap, '+' + (this.score));
+      }
+      if (!this.shield && this.invincible <= 0 && b.x + b.r > p.x && b.x - b.r < p.x + p.w && (b.y - b.r < p.top || b.y + b.r > p.bottom)) {
+        this.lives--;
+        if (typeof setLives === 'function') setLives(this.lives);
+        if (typeof SFX !== 'undefined') SFX.hit();
+        if (typeof screenShake === 'function') screenShake();
+        if (this.lives <= 0) {
+          this.dead = true;
+          this.cleanup();
+          endGame(this.score, 'Flappy Bird');
+        } else { b.y = (p.top + p.bottom) / 2; b.vy = -3; this.invincible = 90; }
+      }
+      return p.x > -100;
+    });
+
+    // Powerups
+    this.powerups.forEach(pu => { pu.frame++; pu.x += pipeSpeed * -1 });
+    this.powerups = this.powerups.filter(pu => {
+      if (pu.x < b.x + b.r && pu.x + pu.w > b.x - b.r && pu.y < b.y + b.r && pu.y + pu.h > b.y - b.r) {
+        this.collectPU(pu); return false;
+      }
+      return pu.x > -100;
+    });
+
+    if (this.invincible > 0) this.invincible--;
   },
-  loop(){
-    if(!gameRunning)return;
-    if(!gamePaused)this.updateGame();
+
+  cleanup() {
+    document.removeEventListener('click', this._flap);
+    window.removeEventListener('keydown', this._onKeyDown);
+  },
+
+  loop() {
+    if (typeof gameRunning !== 'undefined' && !gameRunning) return;
+    if (typeof gamePaused === 'undefined' || !gamePaused) this.updateGame();
     this.draw();
-    gameLoop=requestAnimationFrame(()=>this.loop());
+    gameLoop = requestAnimationFrame(() => this.loop());
   },
-  updateGame(){
-    const W=gameCanvas.width,H=gameCanvas.height,b=this.bird;
-    if(!this.started)return;
-    this.frameCount++;this.bg+=1.5;
-    if(this.shield)this.shieldTimer--;if(this.shieldTimer<=0)this.shield=false;
-    b.vy+=.38;b.y+=b.vy;b.rot=Math.min(Math.max(b.vy*4,-30),90);
-    if(b.y+b.r>H-40){if(!this.shield){this.lives--;setLives(this.lives);SFX.die();screenShake();if(this.lives<=0){this.dead=true;document.removeEventListener('click',this._flap);endGame(this.score,'Flappy Bird');return}}else{this.shield=false;this.shieldTimer=0;SFX.hit()}b.y=H/2;b.vy=-3;this.invincible=90;return}
-    if(b.y-b.r<0){b.y=b.r;b.vy=0}
-    if(this.score>=this.nextPUScore&&this.lastPUScore<this.nextPUScore){this.lastPUScore=this.nextPUScore;this.spawnPowerUp();this.nextPUScore+=5}
-    this.pipeTimer++;const gap=120+Math.max(0,60-this.score*2);const pipeSpeed=2+this.score*.08;
-    if(this.pipeTimer>90){
-      this.pipeTimer=0;
-      const top=80+Math.random()*(H-gap-140);
-      this.pipes.push({x:W+30,top,bottom:top+gap,scored:false,w:52});
-    }
-    this.pipes=this.pipes.filter(p=>{
-      p.x-=pipeSpeed;
-      if(!p.scored&&p.x+p.w<b.x){p.scored=true;this.score++;setScore(this.score);addCombo();SFX.point();showFloatingText(gameCanvasWrap,'+'+(addCombo()))}
-      if(!this.shield&&this.invincible<=0&&b.x+b.r>p.x&&b.x-b.r<p.x+p.w&&(b.y-b.r<p.top||b.y+b.r>p.bottom)){this.lives--;setLives(this.lives);SFX.hit();screenShake();resetCombo();if(this.lives<=0){this.dead=true;document.removeEventListener('click',this._flap);endGame(this.score,'Flappy Bird')}else{b.y=(p.top+p.bottom)/2;b.vy=-3;this.invincible=90}}
-      else if(this.shield&&this.invincible<=0&&b.x+b.r>p.x&&b.x-b.r<p.x+p.w&&(b.y-b.r<p.top||b.y+b.r>p.bottom)){this.shield=false;this.shieldTimer=0;SFX.hit()}
-      return p.x>-100;
-    });
-    this.powerups.forEach(pu=>{pu.frame++;pu.x+=pipeSpeed*-1});
-    this.powerups=this.powerups.filter(pu=>{
-      if(pu.x<b.x+b.r&&pu.x+pu.w>b.x-b.r&&pu.y<b.y+b.r&&pu.y+pu.h>b.y-b.r){this.collectPU(pu);return false}
-      return pu.x>-100;
-    });
-    if(this.invincible>0)this.invincible--;
+
+  draw() {
+    // Keep your original draw code here. 
+    // Ensure gCtx and gameCanvas are defined globally.
   },
-  _updateReal(){if(!gameRunning)return;if(!gamePaused)this.updateGame();this.draw();gameLoop=requestAnimationFrame(()=>this._updateReal())},
+    _updateReal(){if(!gameRunning)return;if(!gamePaused)this.updateGame();this.draw();gameLoop=requestAnimationFrame(()=>this._updateReal())},
   update(){
     if(!gameRunning)return;
     if(!gamePaused)this.updateGame();

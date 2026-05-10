@@ -499,6 +499,18 @@
 <!-- ACHIEVEMENT TOAST CONTAINER -->
 <div id="achievement-toast-container" style="position: fixed; bottom: 20px; right: 20px; display: flex; flex-direction: column; gap: 10px; z-index: 1000; pointer-events: none;"></div>
 
+<!-- CUSTOM CONFIRM DIALOG -->
+<div class="settings-overlay hidden" id="confirmModal" role="dialog" aria-modal="true" aria-labelledby="confirmModalTitle">
+  <div class="settings-panel" style="max-width:400px;text-align:center">
+    <div class="settings-title" id="confirmModalTitle">Confirm</div>
+    <div id="confirmModalMessage" style="color:var(--text2);margin:1rem 0;font-size:.9rem;white-space:pre-line"></div>
+    <div style="display:flex;gap:.8rem;justify-content:center;margin-top:1.2rem">
+      <button class="btn btn-secondary" id="confirmModalCancelBtn">Cancel</button>
+      <button class="btn-danger" id="confirmModalOkBtn">Confirm</button>
+    </div>
+  </div>
+</div>
+
 <script src="script.js" defer></script>
 </body>
 </html>

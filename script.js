@@ -42,10 +42,16 @@ const QUOTES = [
 
 const LEVELS_XP = [{name:'ROOKIE',min:0,max:500},{name:'PLAYER',min:500,max:2000},{name:'PRO',min:2000,max:5000},{name:'LEGEND',min:5000,max:Infinity}];
 const AVATAR_STYLES = ['adventurer','adventurer-neutral','avataaars','big-ears','big-ears-neutral','bottts','croodles','fun-emoji','icons','identicon','initials','lorelei','micah','miniavs','notionists','open-peeps','personas','pixel-art','shapes'];
+const MAX_NAME_LENGTH = 20;
+const MIN_XP_GAIN = 10;
 
 // ===== AUDIO ENGINE =====
 let audioCtx;
-function getAudio(){if(!audioCtx)audioCtx=new(window.AudioContext||window.webkitAudioContext)();return audioCtx;}
+function getAudio(){
+  if(!audioCtx)audioCtx=new(window.AudioContext||window.webkitAudioContext)();
+  if(audioCtx.state==='suspended')audioCtx.resume();
+  return audioCtx;
+}
 function playTone(freq,type='sine',dur=0.1,vol=0.3,decay=true){
   if(!STATE.soundOn)return;
   try{
@@ -73,7 +79,7 @@ const SFX={
 // ===== PARTICLE BACKGROUND =====
 const pbCanvas=document.getElementById('particle-bg');
 const pbCtx=pbCanvas?pbCanvas.getContext('2d'):null;
-let particles=[],mouse={x:0,y:0};
+let particles=[],mouse={x:0,y:0},particleAnimId=null;
 function resizeParticles(){
   if(!pbCanvas)return;
   pbCanvas.width=window.innerWidth;pbCanvas.height=window.innerHeight
@@ -113,16 +119,22 @@ function drawParticles(){
       }
     }
   }
-  requestAnimationFrame(drawParticles);
+  particleAnimId=requestAnimationFrame(drawParticles);
 }
+function stopParticles(){if(particleAnimId){cancelAnimationFrame(particleAnimId);particleAnimId=null;}}
+function startParticles(){if(!particleAnimId)particleAnimId=requestAnimationFrame(drawParticles);}
 window.addEventListener('mousemove',e=>{mouse.x=e.clientX;mouse.y=e.clientY});
-resizeParticles();initParticles();drawParticles();
+resizeParticles();initParticles();startParticles();
 window.addEventListener('resize',()=>{resizeParticles();initParticles()});
 
 // ===== LOADING =====
 function runLoading(){
   const bar=document.getElementById('loadBar'),pct=document.getElementById('loadPct'),quote=document.getElementById('loadQuote');
   let p=0,qi=0;
+  const quoteInterval=setInterval(()=>{
+    quote.style.opacity='0';
+    setTimeout(()=>{quote.textContent=QUOTES[qi++%QUOTES.length];quote.style.opacity='1'},400);
+  },1800);
   const interval=setInterval(()=>{
     p+=Math.random()*4+1;if(p>100)p=100;
     bar.style.width=p+'%';pct.textContent=Math.floor(p)+'%';
@@ -131,6 +143,7 @@ function runLoading(){
 
     if(p>=100){
   clearInterval(interval);
+  clearInterval(quoteInterval);
   setTimeout(()=>{
     if(STATE.name){
       loadHub();
@@ -141,17 +154,19 @@ function runLoading(){
   },400);
 }
 },60);
-  
-  setInterval(()=>{
-    quote.style.opacity='0';
-    setTimeout(()=>{quote.textContent=QUOTES[qi++%QUOTES.length];quote.style.opacity='1'},400);
-  },1800);
 }
 
 // ===== SCREEN MANAGEMENT =====
 function showScreen(id){
   document.querySelectorAll('.screen').forEach(s=>s.classList.add('hidden'));
   document.getElementById(id).classList.remove('hidden');
+}
+
+// ===== HTML ESCAPE =====
+function escapeHtml(str){
+  return String(str)
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+    .replace(/"/g,'&quot;').replace(/'/g,'&#39;');
 }
 
 // ===== AVATAR PICKER =====
@@ -168,6 +183,8 @@ function buildAvatarStyles(){
     };tabs.appendChild(t);
   });
 }
+// Fallback avatar used when DiceBear API is unavailable
+const AVATAR_FALLBACK='data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' viewBox=\'0 0 100 100\'%3E%3Ccircle cx=\'50\' cy=\'50\' r=\'50\' fill=\'%237C3AED\'/%3E%3Ctext x=\'50\' y=\'68\' text-anchor=\'middle\' font-size=\'50\' fill=\'white\'%3E%F0%9F%8E%AE%3C/text%3E%3C/svg%3E';
 function dicebearUrl(style,seed){return`https://api.dicebear.com/7.x/${style}/svg?seed=${seed}&backgroundColor=transparent`}
 function loadAvatars(){
   const grid=document.getElementById('avatarGrid');grid.innerHTML='';
@@ -175,6 +192,7 @@ function loadAvatars(){
     const seed='user'+i,url=dicebearUrl(currentStyle,seed);
     const item=document.createElement('div');item.className='avatar-item'+(seed===selectedSeed?' selected':'');
     const img=document.createElement('img');img.src=url;img.alt='avatar';img.loading='lazy';
+    img.onerror=()=>{img.src=AVATAR_FALLBACK;img.onerror=null;};
     item.appendChild(img);
     item.onclick=()=>{
       selectedSeed=seed;currentAvatarUrl=url;
@@ -199,12 +217,15 @@ document.getElementById('avatarToggle').onclick=()=>{
 };
 buildAvatarStyles();
 currentAvatarUrl=dicebearUrl(currentStyle,'user0');
-document.getElementById('selectedAvatarImg').src=currentAvatarUrl;
+const _selAvatarImg=document.getElementById('selectedAvatarImg');
+_selAvatarImg.src=currentAvatarUrl;
+_selAvatarImg.onerror=()=>{_selAvatarImg.src=AVATAR_FALLBACK;_selAvatarImg.onerror=null;};
 
 // Name submit
 document.getElementById('nameSubmitBtn').onclick=()=>{
   const n=document.getElementById('nameInput').value.trim();
   if(!n){document.getElementById('nameInput').style.borderColor='var(--red)';return}
+  if(n.length>MAX_NAME_LENGTH){document.getElementById('nameInput').style.borderColor='var(--red)';return}
   STATE.name=n;STATE.avatar=currentAvatarUrl||dicebearUrl('fun-emoji','user0');
 
   //Add  saveState() to persist temporary UI state
@@ -229,6 +250,8 @@ document.querySelectorAll('.level-card').forEach(card=>{
 
 // ===== SAVE/LOAD =====
 function saveState(){localStorage.setItem('hw_state',JSON.stringify(STATE))}
+let _saveTimer=null;
+function debouncedSaveState(delay=300){clearTimeout(_saveTimer);_saveTimer=setTimeout(saveState,delay);}
 function loadState(){
   const s=localStorage.getItem('hw_state');
   if(s){const d=JSON.parse(s);Object.assign(STATE,d)}
@@ -286,7 +309,9 @@ function getRankClass(name){return{ROOKIE:'rank-rookie',PLAYER:'rank-player',PRO
 function loadHub(){
   document.getElementById('navName').textContent=STATE.name;
   document.getElementById('navBest').textContent=Math.max(...Object.values(STATE.bestScores),0);
-  document.getElementById('hubAvatar').src=STATE.avatar;
+  const hubAvatarEl=document.getElementById('hubAvatar');
+  hubAvatarEl.src=STATE.avatar;
+  hubAvatarEl.onerror=()=>{hubAvatarEl.src=AVATAR_FALLBACK;hubAvatarEl.onerror=null;};
   document.getElementById('heroName').textContent=STATE.name;
   const rank=getRank();
   const badge=document.getElementById('rankBadge');
@@ -306,7 +331,6 @@ function loadHub(){
   document.getElementById('totalXp').textContent=STATE.xp;
   document.querySelectorAll('.best-score').forEach(el=>{el.textContent=STATE.bestScores[el.dataset.game]||0});
   renderLeaderboard();
-  renderLeaderboard();
   renderAchievements();
   document.getElementById('settingsName').value=STATE.name;
   document.getElementById('soundToggle').classList.toggle('on',STATE.soundOn);
@@ -322,7 +346,7 @@ function renderLeaderboard(){
   top.forEach((e,i)=>{
     const div=document.createElement('div');div.className='lb-entry';
     const rankClass=i===0?'gold':i===1?'silver':i===2?'bronze':'';
-    div.innerHTML=`<div class="lb-rank ${rankClass}">${i===0?'👑':i+1}</div><div class="lb-name">${e.game} — ${e.name}</div><div class="lb-score">${e.score}</div>`;
+    div.innerHTML=`<div class="lb-rank ${rankClass}">${i===0?'👑':i+1}</div><div class="lb-name">${escapeHtml(e.game)} — ${escapeHtml(e.name)}</div><div class="lb-score">${escapeHtml(String(e.score))}</div>`;
     list.appendChild(div);
   });
 }
@@ -473,6 +497,21 @@ function showToast(message, type = 'info') {
   }, 3000);
 }
 
+// ===== CUSTOM CONFIRM DIALOG =====
+function showConfirmModal(title,message,onConfirm){
+  const modal=document.getElementById('confirmModal');
+  document.getElementById('confirmModalTitle').textContent=title;
+  document.getElementById('confirmModalMessage').textContent=message;
+  modal.classList.remove('hidden');
+  const okBtn=document.getElementById('confirmModalOkBtn');
+  const cancelBtn=document.getElementById('confirmModalCancelBtn');
+  function cleanup(){modal.classList.add('hidden');}
+  function onOk(){cleanup();onConfirm();}
+  function onCancel(){cleanup();}
+  okBtn.addEventListener('click',onOk,{once:true});
+  cancelBtn.addEventListener('click',onCancel,{once:true});
+}
+
 // ===== SETTINGS =====
 document.getElementById('settingsBtn').onclick=()=>{
   document.getElementById('settingsOverlay').classList.remove('hidden');
@@ -503,32 +542,31 @@ volumeValue.textContent = Math.round(volumeSlider.value * 100) + '%';
 
 volumeSlider.oninput = function () {
   STATE.volume = +this.value;
-  saveState();
+  debouncedSaveState();
 
   // 👇 ADD THIS
   const percent = Math.round(this.value * 100);
   volumeValue.textContent = percent + '%';
 };
 document.getElementById('resetScores').onclick = () => {
-  const confirmReset = confirm(
-    "⚠️ Are you sure you want to reset ALL scores, XP, achievements, and progress?\n\nThis action is permanent and cannot be undone."
+  showConfirmModal(
+    '⚠️ Reset Progress',
+    'Are you sure you want to reset ALL scores, XP, achievements, and progress?\n\nThis action is permanent and cannot be undone.',
+    ()=>{
+      STATE.xp = 0;
+      STATE.gamesPlayed = 0;
+      STATE.bestCombo = 0;
+      STATE.totalScore = 0;
+      STATE.bestScores = {space:0,flappy:0,asteroid:0,whack:0,dino:0,zombie:0};
+      STATE.leaderboard = [];
+      STATE.achievements = [];
+
+      saveState();
+      loadHub();
+      SFX.hit();
+      showToast('✅ All progress has been reset.','info');
+    }
   );
-
-  if (!confirmReset) return;
-
-  STATE.xp = 0;
-  STATE.gamesPlayed = 0;
-  STATE.bestCombo = 0;
-  STATE.totalScore = 0;
-  STATE.bestScores = {space:0,flappy:0,asteroid:0,whack:0,dino:0,zombie:0};
-  STATE.leaderboard = [];
-  STATE.achievements = [];
-
-  saveState();
-  loadHub();
-  SFX.hit();
-
-  alert("✅ All progress has been reset.");
 };
 // ===== GAME LAUNCH =====
 document.getElementById('popularGamesGrid').addEventListener('click', handleGameClick);
@@ -548,13 +586,13 @@ function handleGameClick(e) {
   SFX.select();
   launchGame(game);
 }
-document.getElementById('backToHub').onclick=()=>{stopGame();showMobileControls('');showScreen('hub-screen');loadHub()};
+document.getElementById('backToHub').onclick=()=>{stopGame();startParticles();showMobileControls('');showScreen('hub-screen');loadHub()};
 document.getElementById('pauseBtn').onclick=togglePause;
 document.getElementById('resumeBtn').onclick=togglePause;
 document.getElementById('restartBtn').onclick=()=>{togglePause();setTimeout(()=>launchGame(currentGame),100)};
-document.getElementById('quitBtn').onclick=()=>{stopGame();showMobileControls('');showScreen('hub-screen');loadHub()};
+document.getElementById('quitBtn').onclick=()=>{stopGame();startParticles();showMobileControls('');showScreen('hub-screen');loadHub()};
 document.getElementById('playAgainBtn').onclick=()=>{document.getElementById('gameOverOverlay').classList.add('hidden');launchGame(currentGame)};
-document.getElementById('goHubBtn').onclick=()=>{stopGame();showMobileControls('');showScreen('hub-screen');loadHub()};
+document.getElementById('goHubBtn').onclick=()=>{stopGame();startParticles();showMobileControls('');showScreen('hub-screen');loadHub()};
 
 let currentGame='',gamePaused=false,gameRunning=false,gameLoop=null;
 const gameCanvasWrap=document.getElementById('gameCanvasWrap');
@@ -594,6 +632,7 @@ function togglePause(){
 }
 function launchGame(game){
   currentGame=game;stopGame();
+  stopParticles();
   document.getElementById('hudGameName').textContent={space:'SPACE SHOOTER',flappy:'FLAPPY BIRD',asteroid:'ASTEROID DODGE',whack:'WHACK-A-MOLE',dino:'DINO JUMP',zombie:'ZOMBIE SHOOTER'}[game];
   document.getElementById('pauseOverlay').classList.add('hidden');
   document.getElementById('gameOverOverlay').classList.add('hidden');
@@ -679,7 +718,7 @@ function endGame(score,gameName){
   gameRunning=false;
   const isHighScore=score>STATE.bestScores[currentGame];
   addToLeaderboard(gameName,score);
-  const xpGained=Math.floor(score/2)+STATE.gamesPlayed*5;
+  const xpGained=Math.max(MIN_XP_GAIN,Math.floor(score/2));
   addXp(xpGained);STATE.totalScore+=score;saveState();
   const overlay=document.getElementById('gameOverOverlay');
   document.getElementById('gameOverTitle').textContent=isHighScore?'🏆 NEW HIGH SCORE!':'GAME OVER';

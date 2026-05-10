@@ -14,7 +14,7 @@ Thank you for your interest in contributing! Please follow these guidelines to k
 |------|---------|
 | `index.html` | All HTML markup and screen layouts |
 | `style.css` | Styles, themes, and animations |
-| `script.js` | All game logic, state management, and UI behaviour |
+| `script.js` | All game logic, state management, and UI behavior |
 
 ## Coding Standards
 

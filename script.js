@@ -42,6 +42,8 @@ const QUOTES = [
 
 const LEVELS_XP = [{name:'ROOKIE',min:0,max:500},{name:'PLAYER',min:500,max:2000},{name:'PRO',min:2000,max:5000},{name:'LEGEND',min:5000,max:Infinity}];
 const AVATAR_STYLES = ['adventurer','adventurer-neutral','avataaars','big-ears','big-ears-neutral','bottts','croodles','fun-emoji','icons','identicon','initials','lorelei','micah','miniavs','notionists','open-peeps','personas','pixel-art','shapes'];
+const MAX_NAME_LENGTH = 20;
+const MIN_XP_GAIN = 10;
 
 // ===== AUDIO ENGINE =====
 let audioCtx;
@@ -223,7 +225,7 @@ _selAvatarImg.onerror=()=>{_selAvatarImg.src=AVATAR_FALLBACK;_selAvatarImg.onerr
 document.getElementById('nameSubmitBtn').onclick=()=>{
   const n=document.getElementById('nameInput').value.trim();
   if(!n){document.getElementById('nameInput').style.borderColor='var(--red)';return}
-  if(n.length>20){document.getElementById('nameInput').style.borderColor='var(--red)';return}
+  if(n.length>MAX_NAME_LENGTH){document.getElementById('nameInput').style.borderColor='var(--red)';return}
   STATE.name=n;STATE.avatar=currentAvatarUrl||dicebearUrl('fun-emoji','user0');
 
   //Add  saveState() to persist temporary UI state
@@ -503,11 +505,11 @@ function showConfirmModal(title,message,onConfirm){
   modal.classList.remove('hidden');
   const okBtn=document.getElementById('confirmModalOkBtn');
   const cancelBtn=document.getElementById('confirmModalCancelBtn');
-  function cleanup(){modal.classList.add('hidden');okBtn.removeEventListener('click',onOk);cancelBtn.removeEventListener('click',onCancel);}
+  function cleanup(){modal.classList.add('hidden');}
   function onOk(){cleanup();onConfirm();}
   function onCancel(){cleanup();}
-  okBtn.addEventListener('click',onOk);
-  cancelBtn.addEventListener('click',onCancel);
+  okBtn.addEventListener('click',onOk,{once:true});
+  cancelBtn.addEventListener('click',onCancel,{once:true});
 }
 
 // ===== SETTINGS =====
@@ -716,7 +718,7 @@ function endGame(score,gameName){
   gameRunning=false;
   const isHighScore=score>STATE.bestScores[currentGame];
   addToLeaderboard(gameName,score);
-  const xpGained=Math.max(10,Math.floor(score/2));
+  const xpGained=Math.max(MIN_XP_GAIN,Math.floor(score/2));
   addXp(xpGained);STATE.totalScore+=score;saveState();
   const overlay=document.getElementById('gameOverOverlay');
   document.getElementById('gameOverTitle').textContent=isHighScore?'🏆 NEW HIGH SCORE!':'GAME OVER';

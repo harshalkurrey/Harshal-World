@@ -1083,3 +1083,55 @@ body[class*="theme-"] {
   cursor: not-allowed;
   background: var(--text2);
 }
+
+/* BACK TO TOP BUTTON */
+.back-to-top-btn {
+  position: fixed;
+  bottom: 2rem;
+  right: 2rem;
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: var(--glass2);
+  border: 1px solid var(--border);
+  color: var(--neon2);
+  font-size: 1.2rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  z-index: 999;
+  opacity: 0;
+  pointer-events: none;
+  transition: all 0.3s ease, transform 0.2s ease;
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+}
+
+.back-to-top-btn:hover {
+  background: var(--purple);
+  color: #fff;
+  border-color: var(--purple2);
+  transform: translateY(-3px);
+  box-shadow: var(--glow);
+}
+
+.back-to-top-btn:active {
+  transform: translateY(0);
+}
+
+.back-to-top-btn.visible {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+@media(max-width: 768px) {
+  .back-to-top-btn {
+    width: 40px;
+    height: 40px;
+    bottom: 1.5rem;
+    right: 1.5rem;
+    font-size: 1rem;
+  }
+}

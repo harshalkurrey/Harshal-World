@@ -3064,3 +3064,24 @@ window.addEventListener('keydown', (e) => {
         gameSearch.focus();
     }
 });
+
+// ===== BACK TO TOP BUTTON =====
+const hubScreen = document.getElementById('hub-screen');
+const backToTopBtn = document.getElementById('backToTopBtn');
+
+if (hubScreen && backToTopBtn) {
+  hubScreen.addEventListener('scroll', () => {
+    if (hubScreen.scrollTop > 300) {
+      backToTopBtn.classList.add('visible');
+    } else {
+      backToTopBtn.classList.remove('visible');
+    }
+  });
+
+  backToTopBtn.addEventListener('click', () => {
+    hubScreen.scrollTo({
+      top: 0,
+      behavior: 'smooth'
+    });
+  });
+}

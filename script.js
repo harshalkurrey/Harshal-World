@@ -201,10 +201,48 @@ buildAvatarStyles();
 currentAvatarUrl=dicebearUrl(currentStyle,'user0');
 document.getElementById('selectedAvatarImg').src=currentAvatarUrl;
 
+// Centralized Name Validation Helper
+function validateName(name) {
+  const trimmed = name.trim();
+  if (!trimmed) {
+    return { isValid: false, message: "⚠️ Player name cannot be empty." };
+  }
+  if (trimmed.length <= 3) {
+    return { isValid: false, message: "⚠️ Player name must be more than 3 characters." };
+  }
+  if (/\s/.test(trimmed)) {
+    return { isValid: false, message: "⚠️ Spaces are not allowed in player names." };
+  }
+  if (!/^[a-zA-Z0-9_-]+$/.test(trimmed)) {
+    return { isValid: false, message: "⚠️ Name can only contain letters, numbers, underscores, and hyphens." };
+  }
+  return { isValid: true };
+}
+
 // Name submit
 document.getElementById('nameSubmitBtn').onclick=()=>{
   const n=document.getElementById('nameInput').value.trim();
-  if(!n){document.getElementById('nameInput').style.borderColor='var(--red)';return}
+  const validation=validateName(n);
+  
+  if(!validation.isValid){
+    const inputEl=document.getElementById('nameInput');
+    const errorEl=document.getElementById('nameError');
+    inputEl.style.borderColor='var(--red)';
+    errorEl.textContent=validation.message;
+    errorEl.style.display='block';
+    
+    // Shake initial entry card
+    const card=document.querySelector('#name-screen .entry-card');
+    if(card){
+      card.classList.remove('shaking');
+      void card.offsetWidth;
+      card.classList.add('shaking');
+      setTimeout(()=>card.classList.remove('shaking'),250);
+    }
+    SFX.die();
+    return;
+  }
+  
   STATE.name=n;STATE.avatar=currentAvatarUrl||dicebearUrl('fun-emoji','user0');
 
   //Add  saveState() to persist temporary UI state
@@ -213,6 +251,10 @@ document.getElementById('nameSubmitBtn').onclick=()=>{
   SFX.select();showScreen('level-screen');
 };
 document.getElementById('nameInput').addEventListener('keydown',e=>{if(e.key==='Enter')document.getElementById('nameSubmitBtn').click()});
+document.getElementById('nameInput').addEventListener('input',()=>{
+  document.getElementById('nameInput').style.borderColor='';
+  document.getElementById('nameError').style.display='none';
+});
 
 // ===== LEVEL SELECT =====
 document.querySelectorAll('.level-card').forEach(card=>{
@@ -476,6 +518,8 @@ function showToast(message, type = 'info') {
 // ===== SETTINGS =====
 document.getElementById('settingsBtn').onclick=()=>{
   document.getElementById('settingsOverlay').classList.remove('hidden');
+  document.getElementById('settingsName').style.borderColor='';
+  document.getElementById('settingsNameError').style.display='none';
   const emojis=['🎮','⚡','🔥','💀','🚀','🌟','👾','🎯'];
   const ep=document.getElementById('emojiPick');ep.innerHTML='';
   emojis.forEach(e=>{
@@ -486,6 +530,45 @@ document.getElementById('settingsBtn').onclick=()=>{
   SFX.click();
 };
 document.getElementById('closeSettings').onclick=()=>{document.getElementById('settingsOverlay').classList.add('hidden')};
+
+// Save Name functionality in Settings
+document.getElementById('saveName').onclick=()=>{
+  const inputEl=document.getElementById('settingsName');
+  const errorEl=document.getElementById('settingsNameError');
+  const n=inputEl.value.trim();
+  const validation=validateName(n);
+  
+  if(!validation.isValid){
+    inputEl.style.borderColor='var(--red)';
+    errorEl.textContent=validation.message;
+    errorEl.style.display='block';
+    
+    // Shake settings panel
+    const panel=document.querySelector('.settings-panel');
+    if(panel){
+      panel.classList.remove('shaking');
+      void panel.offsetWidth;
+      panel.classList.add('shaking');
+      setTimeout(()=>panel.classList.remove('shaking'),250);
+    }
+    SFX.die();
+    return;
+  }
+  
+  STATE.name=n;
+  saveState();
+  loadHub();
+  showToast('🎉 Name updated successfully!', 'success');
+  
+  setTimeout(()=>{
+    document.getElementById('settingsOverlay').classList.add('hidden');
+  },400);
+};
+
+document.getElementById('settingsName').addEventListener('input',()=>{
+  document.getElementById('settingsName').style.borderColor='';
+  document.getElementById('settingsNameError').style.display='none';
+});
 document.getElementById('soundToggle').onclick=function(){
   STATE.soundOn=!STATE.soundOn;this.classList.toggle('on',STATE.soundOn);
   document.getElementById('soundToggleNav').textContent=STATE.soundOn?'🔊':'🔇';

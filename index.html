@@ -42,6 +42,7 @@
       </div>
     </div>
     <input class="name-input" id="nameInput" type="text" placeholder="Enter your player name..." maxlength="20" autocomplete="off">
+    <div class="name-error-msg" id="nameError" style="color: var(--red); font-size: 0.8rem; margin-top: 0.5rem; text-align: left; display: none; font-family: 'Nunito', sans-serif;"></div>
     <div class="avatar-toggle" id="avatarToggle">
       <span>🎨</span>
       <span id="avatarToggleText">Choose avatar</span>
@@ -484,6 +485,7 @@
         <input class="name-input" id="settingsName" style="flex:1;padding:.5rem .8rem;font-size:.85rem" type="text" maxlength="20">
         <button class="btn" style="padding:.5rem .8rem;font-size:.75rem" id="saveName">SAVE</button>
       </div>
+      <div class="name-error-msg" id="settingsNameError" style="color: var(--red); font-size: 0.8rem; margin-top: 0.2rem; text-align: left; display: none; font-family: 'Nunito', sans-serif;"></div>
     </div>
     <div class="settings-row" style="flex-direction:column;align-items:flex-start;gap:.5rem">
       <span class="settings-label">Quick Avatar (emoji)</span>

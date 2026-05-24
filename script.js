@@ -665,9 +665,22 @@ function resizeCanvas(){
   updateDinoMobileLayout();
 }
 function stopGame(){
-  gameRunning=false;gamePaused=false;if(gameLoop)cancelAnimationFrame(gameLoop);gameLoop=null;
+
+  gameRunning=false;
+  gamePaused=false;
+
+  if(gameLoop)
+    cancelAnimationFrame(gameLoop);
+
+  gameLoop=null;
+
+  // Stop Snake Game Loop
+  if(currentGame === 'snake'){
+    GAMES.snake.stop();
+  }
+
   gameCanvasWrap.classList.remove('dino-mobile-split');
-  
+
   clearGame();
 }
 function togglePause(){
@@ -677,7 +690,9 @@ function togglePause(){
 }
 function launchGame(game){
   currentGame=game;stopGame();
-  document.getElementById('hudGameName').textContent={space:'SPACE SHOOTER',flappy:'FLAPPY BIRD',asteroid:'ASTEROID DODGE',whack:'WHACK-A-MOLE',dino:'DINO JUMP',zombie:'ZOMBIE SHOOTER'}[game];
+  document.getElementById('hudGameName').textContent=
+{
+  space:'SPACE SHOOTER',flappy:'FLAPPY BIRD',asteroid:'ASTEROID DODGE',whack:'WHACK-A-MOLE',dino:'DINO JUMP',zombie:'ZOMBIE SHOOTER',snake:'SNAKE GAME'}[game];
   document.getElementById('pauseOverlay').classList.add('hidden');
   document.getElementById('gameOverOverlay').classList.add('hidden');
   document.getElementById('spaceTutorial').classList.add('hidden');
@@ -686,6 +701,11 @@ function launchGame(game){
   showScreen('game-screen');
   requestAnimationFrame(()=>resizeCanvas());
   showMobileControls(game);
+  if(game === 'snake'){
+  gameRunning = true;
+  GAMES.snake.start();
+  return;
+}
 
   // Space Shooter: show tutorial on desktop before starting
   if(game==='space'&&!('ontouchstart' in window)){
@@ -704,6 +724,13 @@ function launchGame(game){
     if(document.getElementById('zombieTutorial'))document.getElementById('zombieTutorial').classList.remove('hidden');
     return; // game starts after Continue click
   }
+
+  // Snake Game: show tutorial on desktop before starting
+  if(game==='snake'&&!('ontouchstart' in window)){
+  if(document.getElementById('snakeTutorial'))
+    document.getElementById('snakeTutorial').classList.remove('hidden');
+  return;
+}
 
   gameRunning=true;
   STATE.gamesPlayed++;saveState();
@@ -2424,9 +2451,10 @@ const SPIN_WHEEL = {
     {name:'ASTEROID DODGE', emoji:'☄️', color:'#A855F7'},
     {name:'WHACK A BEAR', emoji:'🐻', color:'#10B981'},
     {name:'DINO JUMP', emoji:'🦕', color:'#F59E0B'},
-    {name:'ZOMBIE SHOOTER', emoji:'🧟', color:'#EF4444'}
+    {name:'ZOMBIE SHOOTER', emoji:'🧟', color:'#EF4444'},
+    {name:'SNAKE GAME', emoji:'🐍', color:'#22c55e'}
   ],
-  gameKeys: ['space', 'flappy', 'asteroid', 'whack', 'dino', 'zombie'],
+  gameKeys: ['space', 'flappy', 'asteroid', 'whack', 'dino', 'zombie', 'snake'],
   spinning: false,
   currentRotation: 0,
   selectedGame: null,
@@ -2820,6 +2848,246 @@ GAMES.zombie = {
     if(!gamePaused) this.update();
     this.draw();
     gameLoop = requestAnimationFrame(() => this.loop());
+  }
+};
+
+// ============================================================
+// SNAKE GAME
+// ============================================================
+GAMES.snake = {
+  snake: [],
+  food: {},
+  direction: 'RIGHT',
+  nextDirection: 'RIGHT',
+  score: 0,
+  gridSize: 20,
+  speed: 120,
+  loopRef: null,
+
+  start() {
+
+    this.snake = [
+      {x:10,y:10},
+      {x:9,y:10},
+      {x:8,y:10}
+    ];
+
+    this.direction = 'RIGHT';
+    this.nextDirection = 'RIGHT';
+    this.score = 0;
+
+    setScore(0);
+    setLives(1);
+
+    this.spawnFood();
+
+    document.addEventListener('keydown', this.keyHandler);
+
+    clearInterval(this.loopRef);
+
+    this.loopRef = setInterval(() => {
+
+      if(gameRunning && !gamePaused){
+        this.update();
+        this.draw();
+      }
+
+    }, this.speed);
+  },
+
+  stop(){
+
+    clearInterval(this.loopRef);
+
+    document.removeEventListener(
+      'keydown',
+      this.keyHandler
+    );
+  },
+
+  keyHandler(e){
+
+    if(currentGame !== 'snake') return;
+
+    if(
+      e.key === 'ArrowUp' &&
+      GAMES.snake.direction !== 'DOWN'
+    ){
+      GAMES.snake.nextDirection = 'UP';
+    }
+
+    if(
+      e.key === 'ArrowDown' &&
+      GAMES.snake.direction !== 'UP'
+    ){
+      GAMES.snake.nextDirection = 'DOWN';
+    }
+
+    if(
+      e.key === 'ArrowLeft' &&
+      GAMES.snake.direction !== 'RIGHT'
+    ){
+      GAMES.snake.nextDirection = 'LEFT';
+    }
+
+    if(
+      e.key === 'ArrowRight' &&
+      GAMES.snake.direction !== 'LEFT'
+    ){
+      GAMES.snake.nextDirection = 'RIGHT';
+    }
+  },
+
+  spawnFood(){
+
+    const cols = Math.floor(
+      gameCanvas.width / this.gridSize
+    );
+
+    const rows = Math.floor(
+      gameCanvas.height / this.gridSize
+    );
+
+    this.food = {
+      x: Math.floor(Math.random() * cols),
+      y: Math.floor(Math.random() * rows)
+    };
+  },
+
+  update(){
+
+    this.direction = this.nextDirection;
+
+    const head = {
+      ...this.snake[0]
+    };
+
+    if(this.direction === 'UP') head.y--;
+
+    if(this.direction === 'DOWN') head.y++;
+
+    if(this.direction === 'LEFT') head.x--;
+
+    if(this.direction === 'RIGHT') head.x++;
+
+    const cols = Math.floor(
+      gameCanvas.width / this.gridSize
+    );
+
+    const rows = Math.floor(
+      gameCanvas.height / this.gridSize
+    );
+
+    // Wall collision
+    if(
+      head.x < 0 ||
+      head.y < 0 ||
+      head.x >= cols ||
+      head.y >= rows
+    ){
+      this.gameOver();
+      return;
+    }
+
+    // Self collision
+    for(let part of this.snake){
+
+      if(
+        part.x === head.x &&
+        part.y === head.y
+      ){
+        this.gameOver();
+        return;
+      }
+    }
+
+    this.snake.unshift(head);
+
+    // Food eaten
+    if(
+      head.x === this.food.x &&
+      head.y === this.food.y
+    ){
+
+      this.score += 10;
+
+      setScore(this.score);
+
+      SFX.point();
+
+      this.spawnFood();
+
+    } else {
+
+      this.snake.pop();
+
+    }
+  },
+
+  draw(){
+
+    const ctx = gCtx;
+
+    // Background
+    ctx.fillStyle = '#111';
+
+    ctx.fillRect(
+      0,
+      0,
+      gameCanvas.width,
+      gameCanvas.height
+    );
+
+    // Food
+    ctx.fillStyle = 'red';
+
+    ctx.fillRect(
+      this.food.x * this.gridSize,
+      this.food.y * this.gridSize,
+      this.gridSize,
+      this.gridSize
+    );
+
+    // Snake
+    this.snake.forEach((part,index)=>{
+
+      ctx.fillStyle =
+        index === 0
+        ? '#00ff88'
+        : '#00cc66';
+
+      ctx.fillRect(
+        part.x * this.gridSize,
+        part.y * this.gridSize,
+        this.gridSize - 2,
+        this.gridSize - 2
+      );
+    });
+
+    // Decoration
+    ctx.save();
+
+    ctx.font='45px serif';
+
+    ctx.globalAlpha=0.5;
+
+    ctx.fillText(
+      '🐍',
+      20,
+      gameCanvas.height-20
+    );
+
+    ctx.restore();
+  },
+
+  gameOver(){
+
+    this.stop();
+
+    endGame(
+      this.score,
+      'snake'
+    );
   }
 };
 

@@ -2151,7 +2151,7 @@ GAMES.dino=(function(){
       });
     }
     // save high score
-    if(score>hiScore){hiScore=score;if(STATE.bestScores)STATE.bestScores.dino=hiScore;saveState();}
+    if(score>hiScore){hiScore=score;if(STATE.bestScores){STATE.bestScores.dino=hiScore;saveState();}}
     // delayed game over
     setTimeout(()=>{
       if(state==='dead'){

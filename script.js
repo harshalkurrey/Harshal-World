@@ -1888,7 +1888,7 @@ GAMES.dino=(function(){
   function reset(){
     W=gameCanvas.width; H=gameCanvas.height;
     groundY=H-getGroundOffset();
-    hiScore=parseInt(localStorage.getItem('dinoJump_best'))||0;
+    hiScore=STATE.bestScores?.dino||0;
     score=0; frameCount=0; gameSpeed=5; maxSpeed=15;
     state='idle'; jumpsLeft=2; dayNightPhase=0; lastMilestone=0;
     shakeTimer=0; shakeIntensity=0; bgPulsePhase=0; bgPulseTimer=0;
@@ -2151,7 +2151,7 @@ GAMES.dino=(function(){
       });
     }
     // save high score
-    if(score>hiScore){hiScore=score;localStorage.setItem('dinoJump_best',hiScore);}
+    if(score>hiScore){hiScore=score;if(STATE.bestScores){STATE.bestScores.dino=hiScore;saveState();}}
     // delayed game over
     setTimeout(()=>{
       if(state==='dead'){

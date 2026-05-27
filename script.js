@@ -365,7 +365,9 @@ function renderLeaderboard(){
   top.forEach((e,i)=>{
     const div=document.createElement('div');div.className='lb-entry';
     const rankClass=i===0?'gold':i===1?'silver':i===2?'bronze':'';
-    div.innerHTML=`<div class="lb-rank ${rankClass}">${i===0?'👑':i+1}</div><div class="lb-name">${GAME_NAMES[e.game]||e.game} — ${e.name}</div><div class="lb-score">${e.score}</div>`;
+    const rankIcon=i===0?'👑':i+1;
+    const gameName=GAME_NAMES[e.game]||e.game;
+    div.innerHTML=`<div class="lb-rank ${rankClass}">${rankIcon}</div><div class="lb-name">${gameName} — ${e.name}</div><div class="lb-score">${e.score}</div>`;
     list.appendChild(div);
   });
 }

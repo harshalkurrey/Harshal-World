@@ -8,7 +8,7 @@ const STATE = {
   totalScore: 0,
   soundOn: true,
   volume: 0.5,
-  bestScores: {space:0,flappy:0,asteroid:0,whack:0,dino:0,zombie:0},
+  bestScores: {space:0,flappy:0,asteroid:0,whack:0,dino:0,zombie:0,snake:0},
 
   leaderboard: [],
   emojiAvatar: '🎮',
@@ -42,6 +42,7 @@ const QUOTES = [
 
 const LEVELS_XP = [{name:'ROOKIE',min:0,max:500},{name:'PLAYER',min:500,max:2000},{name:'PRO',min:2000,max:5000},{name:'LEGEND',min:5000,max:Infinity}];
 const AVATAR_STYLES = ['adventurer','adventurer-neutral','avataaars','big-ears','big-ears-neutral','bottts','croodles','fun-emoji','icons','identicon','initials','lorelei','micah','miniavs','notionists','open-peeps','personas','pixel-art','shapes'];
+const GAME_NAMES = {space:'SPACE SHOOTER',flappy:'FLAPPY BIRD',asteroid:'ASTEROID DODGE',whack:'WHACK-A-MOLE',dino:'DINO JUMP',zombie:'ZOMBIE SHOOTER',snake:'SNAKE GAME'};
 
 // ===== AUDIO ENGINE =====
 let audioCtx;
@@ -364,7 +365,9 @@ function renderLeaderboard(){
   top.forEach((e,i)=>{
     const div=document.createElement('div');div.className='lb-entry';
     const rankClass=i===0?'gold':i===1?'silver':i===2?'bronze':'';
-    div.innerHTML=`<div class="lb-rank ${rankClass}">${i===0?'👑':i+1}</div><div class="lb-name">${e.game} — ${e.name}</div><div class="lb-score">${e.score}</div>`;
+    const rankIcon=i===0?'👑':i+1;
+    const gameName=GAME_NAMES[e.game]||e.game;
+    div.innerHTML=`<div class="lb-rank ${rankClass}">${rankIcon}</div><div class="lb-name">${gameName} — ${e.name}</div><div class="lb-score">${e.score}</div>`;
     list.appendChild(div);
   });
 }
@@ -432,7 +435,6 @@ function addToLeaderboard(game,score){
   STATE.leaderboard.push({game,name:STATE.name,score,date:Date.now()});
   STATE.leaderboard.sort((a,b)=>b.score-a.score);
   STATE.leaderboard=STATE.leaderboard.slice(0,20);
-  if(score>STATE.bestScores[game])STATE.bestScores[game]=score;
   saveState();
 }
 function addXp(amount){
@@ -603,7 +605,7 @@ document.getElementById('resetScores').onclick = () => {
   STATE.gamesPlayed = 0;
   STATE.bestCombo = 0;
   STATE.totalScore = 0;
-  STATE.bestScores = {space:0,flappy:0,asteroid:0,whack:0,dino:0,zombie:0};
+  STATE.bestScores = {space:0,flappy:0,asteroid:0,whack:0,dino:0,zombie:0,snake:0};
   STATE.leaderboard = [];
   STATE.achievements = [];
 
@@ -788,7 +790,8 @@ function spawnConfetti(){
 function endGame(score,gameName){
   gameRunning=false;
   const isHighScore=score>STATE.bestScores[currentGame];
-  addToLeaderboard(gameName,score);
+  if(isHighScore)STATE.bestScores[currentGame]=score;
+  addToLeaderboard(currentGame,score);
   const xpGained=Math.floor(score/2)+STATE.gamesPlayed*5;
   addXp(xpGained);STATE.totalScore+=score;saveState();
   const overlay=document.getElementById('gameOverOverlay');

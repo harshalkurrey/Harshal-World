@@ -274,10 +274,20 @@ document.querySelectorAll('.level-card').forEach(card=>{
 function saveState(){localStorage.setItem('hw_state',JSON.stringify(STATE))}
 function loadState(){
   const s=localStorage.getItem('hw_state');
-  if(s){const d=JSON.parse(s);Object.assign(STATE,d)}
+  if(s){
+    const d=JSON.parse(s);
+    Object.assign(STATE,d);
+    
+    // Ensure all default best scores exist (backwards compatibility for old saved states)
+    const defaultBestScores = {space:0,flappy:0,asteroid:0,whack:0,dino:0,zombie:0,snake:0};
+    STATE.bestScores = Object.assign({}, defaultBestScores, STATE.bestScores);
+    
+    const defaultDailyChallenge = {lastCompleted: null, progress: 0, claimed: false};
+    STATE.dailyChallenge = Object.assign({}, defaultDailyChallenge, STATE.dailyChallenge);
+  }
   // Reset daily challenge if it's a new day
   const today = new Date().toDateString();
-  if (STATE.dailyChallenge.lastCompleted !== today) {
+  if (STATE.dailyChallenge && STATE.dailyChallenge.lastCompleted !== today) {
     STATE.dailyChallenge.progress = 0;
     STATE.dailyChallenge.claimed = false;
   }
@@ -789,15 +799,18 @@ function spawnConfetti(){
 }
 function endGame(score,gameName){
   gameRunning=false;
-  const isHighScore=score>STATE.bestScores[currentGame];
-  if(isHighScore)STATE.bestScores[currentGame]=score;
+  const isHighScore=score>(STATE.bestScores?.[currentGame]||0);
+  if(isHighScore){
+    if(!STATE.bestScores)STATE.bestScores={};
+    STATE.bestScores[currentGame]=score;
+  }
   addToLeaderboard(currentGame,score);
   const xpGained=Math.floor(score/2)+STATE.gamesPlayed*5;
   addXp(xpGained);STATE.totalScore+=score;saveState();
   const overlay=document.getElementById('gameOverOverlay');
   document.getElementById('gameOverTitle').textContent=isHighScore?'🏆 NEW HIGH SCORE!':'GAME OVER';
   document.getElementById('gameOverScore').textContent='Score: '+score;
-  document.getElementById('gameOverExtra').innerHTML=`+${xpGained} XP earned<br>Best: ${STATE.bestScores[currentGame]}`;
+  document.getElementById('gameOverExtra').innerHTML=`+${xpGained} XP earned<br>Best: ${STATE.bestScores?.[currentGame]||0}`;
   overlay.classList.remove('hidden');
   if(isHighScore)spawnConfetti();
   SFX.die();

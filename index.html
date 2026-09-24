@@ -46,9 +46,10 @@
           <div class="entry-sub">Enter your name to begin the journey ...</div>
         </div>
       </div>
-      <input class="name-input" id="nameInput" type="text" placeholder="Enter your player name..." maxlength="20"
+   <div class="name" >
+       <input class="name-input" id="nameInput" type="text" placeholder="Enter your player name..." maxlength="20"
         autocomplete="off">
-      <div class="name-error-msg" id="nameError" style="color: var(--red); font-size: 0.8rem; margin-top: 0.2rem; text-align: left; display: none; font-family: 'Nunito', sans-serif;"></div>
+<div class="name-error-msg" id="nameError" role="alert" aria-live="polite"></div>
       <div class="avatar-toggle" id="avatarToggle">
         <span>🎨</span>
         <span id="avatarToggleText">Choose avatar</span>
@@ -63,6 +64,7 @@
       </div>
     </div>
   </div>
+
 
   <!-- LEVEL SELECT SCREEN -->
   <div class="screen hidden" id="level-screen">
@@ -557,17 +559,10 @@ git commit -m "Merge remote main branch into local main"
       </div>
       <div class="name-error-msg" id="settingsNameError" style="color: var(--red); font-size: 0.8rem; margin-top: 0.2rem; text-align: left; display: none; font-family: 'Nunito', sans-serif;"></div>
     </div>
-    <div class="settings-row" style="flex-direction:column;align-items:flex-start;gap:.5rem">
-      <span class="settings-label">Quick Avatar (emoji)</span>
-      <div class="emoji-pick" id="emojiPick"></div>
-    </div>
-    <div class="settings-row">
-      <span class="settings-label">Reset All Scores</span>
-      <button class="btn-danger" id="resetScores">RESET</button>
-    </div>
   </div>
 
   <!-- ACHIEVEMENT TOAST CONTAINER -->
+  <div id="notificationBox" class="notification-box" role="status" aria-live="polite" aria-atomic="true"></div>
   <div id="achievement-toast-container"
     style="position: fixed; bottom: 20px; right: 20px; display: flex; flex-direction: column; gap: 10px; z-index: 1000; pointer-events: none;">
   </div>

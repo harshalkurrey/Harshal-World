@@ -217,7 +217,7 @@ function validateName(name) {
     return { isValid: false, message: "⚠️ Player name cannot be empty." };
   }
   if (trimmed.length <= 3) {
-    return { isValid: false, message: "⚠️ Player name must be more than 3 characters." };
+    return { isValid: false, message: "⚠️ Name must be longer than 3 characters." };
   }
   if (/\s/.test(trimmed)) {
     return { isValid: false, message: "⚠️ Spaces are not allowed in player names." };
@@ -523,32 +523,24 @@ function updateDailyChallengeUI() {
 }
 
 function showToast(message, type = 'info') {
-  // Simple toast implementation
+  const container = document.getElementById('notificationBox');
+  if (!container) return;
+  const icons = { success: '✅', error: '⚠️', info: 'ℹ️' };
   const toast = document.createElement('div');
-  toast.style.position = 'fixed';
-  toast.style.top = '20px';
-  toast.style.right = '20px';
-  toast.style.color = 'white';
-  toast.style.padding = '1rem';
-  toast.style.borderRadius = '8px';
-  toast.style.zIndex = '1000';
-  toast.style.fontFamily = 'Nunito, sans-serif';
-  toast.textContent = message;
-  
-  // Set background color based on type
-  if (type === 'success') {
-    toast.style.background = '#10B981';
-  } else if (type === 'error') {
-    toast.style.background = '#EF4444';
-  } else {
-    toast.style.background = '#6B7280'; // Default gray for info
-  }
-  
-  document.body.appendChild(toast);
-  setTimeout(() => {
-    toast.style.opacity = '0';
+  toast.className = `notification ${type}`;
+  toast.innerHTML = `
+    <span class="notification-icon" aria-hidden="true">${icons[type] || icons.info}</span>
+    <span class="notification-message"></span>
+    <button class="notification-close" type="button" aria-label="Close notification">✕</button>
+  `;
+  toast.querySelector('.notification-message').textContent = message;
+  const dismiss = () => {
+    toast.classList.add('hide');
     setTimeout(() => toast.remove(), 300);
-  }, 3000);
+  };
+  toast.querySelector('.notification-close').addEventListener('click', dismiss);
+  container.appendChild(toast);
+  setTimeout(dismiss, 4000);
 }
 
 // ===== SETTINGS =====
@@ -647,7 +639,7 @@ document.getElementById('resetScores').onclick = () => {
   loadHub();
   SFX.hit();
 
-  alert("✅ All progress has been reset.");
+  showToast('✅ All progress has been reset.', 'success');
 };
 // ===== GAME LAUNCH =====
 document.getElementById('popularGamesGrid').addEventListener('click', handleGameClick);

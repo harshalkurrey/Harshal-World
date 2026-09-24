@@ -48,6 +48,7 @@
       </div>
       <input class="name-input" id="nameInput" type="text" placeholder="Enter your player name..." maxlength="20"
         autocomplete="off">
+      <div class="name-error-msg" id="nameError" style="color: var(--red); font-size: 0.8rem; margin-top: 0.2rem; text-align: left; display: none; font-family: 'Nunito', sans-serif;"></div>
       <div class="avatar-toggle" id="avatarToggle">
         <span>🎨</span>
         <span id="avatarToggleText">Choose avatar</span>
@@ -60,7 +61,8 @@
       <div style="display:flex;gap:.8rem;margin-top:1.3rem">
         <button class="btn" id="nameSubmitBtn" style="flex:1">ENTER WORLD →</button>
       </div>
-    </div>  
+    </div>
+  </div>
 
   <!-- LEVEL SELECT SCREEN -->
   <div class="screen hidden" id="level-screen">
@@ -127,8 +129,12 @@
         </div>
         <div class="daily-challenge-content">
           <div class="daily-challenge-task">
-            <div class="task-check" id="taskCheck">✅</div>
-            <div class="task-text">Daily Reward Available</div>
+            <div class="task-check" id="taskCheck">○</div>
+            <div class="task-text">
+              <div id="dailyChallengeName">Daily Challenge</div>
+              <div class="task-description" id="dailyChallengeDescription"></div>
+              <div class="task-progress" id="dailyChallengeProgress">Progress: 0 / 0</div>
+            </div>
           </div>
           <button class="claim-reward-btn" id="claimRewardBtn" disabled>🎁 COLLECT REWARDS</button>
         </div>

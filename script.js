@@ -275,15 +275,30 @@ function saveState(){localStorage.setItem('hw_state',JSON.stringify(STATE))}
 function loadState(){
   const s=localStorage.getItem('hw_state');
   if(s){
-    const d=JSON.parse(s);
-    Object.assign(STATE,d);
-    
-    // Ensure all default best scores exist (backwards compatibility for old saved states)
-    const defaultBestScores = {space:0,flappy:0,asteroid:0,whack:0,dino:0,zombie:0,snake:0};
-    STATE.bestScores = Object.assign({}, defaultBestScores, STATE.bestScores);
-    
-    const defaultDailyChallenge = {lastCompleted: null, progress: 0, claimed: false};
-    STATE.dailyChallenge = Object.assign({}, defaultDailyChallenge, STATE.dailyChallenge);
+    let d;
+    try {
+      d = JSON.parse(s);
+    } catch(e) {
+      // Corrupt JSON: remove the invalid entry and fall back to defaults
+      console.warn('[HW] hw_state contained invalid JSON and was reset.', e);
+      localStorage.removeItem('hw_state');
+      d = null;
+    }
+    // Additional sanity check: parsed value must be a non-null plain object
+    if (d !== null && typeof d === 'object' && !Array.isArray(d)) {
+      Object.assign(STATE,d);
+
+      // Ensure all default best scores exist (backwards compatibility for old saved states)
+      const defaultBestScores = {space:0,flappy:0,asteroid:0,whack:0,dino:0,zombie:0,snake:0};
+      STATE.bestScores = Object.assign({}, defaultBestScores, STATE.bestScores);
+
+      const defaultDailyChallenge = {lastCompleted: null, progress: 0, claimed: false};
+      STATE.dailyChallenge = Object.assign({}, defaultDailyChallenge, STATE.dailyChallenge);
+    } else if (d !== null) {
+      // Parsed but wrong type (e.g. array or primitive): discard
+      console.warn('[HW] hw_state was not a plain object and was reset.');
+      localStorage.removeItem('hw_state');
+    }
   }
   // Reset daily challenge if it's a new day
   const today = new Date().toDateString();

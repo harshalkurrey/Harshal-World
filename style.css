@@ -1191,3 +1191,299 @@ body.light-theme .notification { background: rgba(248,250,255,.96); }
     font-size: 1rem;
   }
 }
+
+/* =========================
+   RESPONSIVE VIEWPORT FIXES
+   Issue #103
+   ========================= */
+
+@media (max-width: 768px) {
+  html,
+  body {
+    width: 100%;
+    max-width: 100%;
+    overflow-x: hidden;
+  }
+
+  .hub-content {
+    width: 100%;
+    max-width: 100%;
+    padding: 1rem;
+  }
+
+  .navbar {
+    width: 100%;
+    padding: 0.6rem;
+    gap: 0.5rem;
+  }
+
+  .nav-greeting,
+  .nav-best {
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .hero {
+    width: 100%;
+    padding: 1rem;
+    gap: 1rem;
+  }
+
+  .hero-info {
+    min-width: 0;
+    flex: 1 1 180px;
+  }
+
+  .hero-stats {
+    width: 100%;
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+
+  .stat-chip {
+    flex: 1 1 90px;
+    min-width: 0;
+  }
+
+  .games-grid {
+    width: 100%;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.8rem;
+  }
+
+  .game-card {
+    min-width: 0;
+  }
+
+  .game-banner {
+    height: 110px;
+    font-size: 3rem;
+  }
+
+  .game-card-info {
+    min-width: 0;
+  }
+
+  .game-name,
+  .game-desc {
+    overflow-wrap: anywhere;
+  }
+
+  .hub-bottom {
+    width: 100%;
+    grid-template-columns: 1fr;
+  }
+
+  .hub-controls {
+    padding: 1rem 0;
+    gap: 0.8rem;
+  }
+
+  .search-wrapper {
+    width: 100%;
+    min-width: 0;
+    max-width: none;
+  }
+
+  .filter-pills {
+    width: 100%;
+    justify-content: flex-start;
+  }
+
+  .filter-btn {
+    flex: 1 1 auto;
+  }
+
+  .tutorial-overlay {
+    padding: 1rem;
+    overflow-y: auto;
+  }
+
+  .tutorial-grid {
+    grid-template-columns: 1fr;
+    max-width: 100%;
+  }
+
+  .tutorial-key {
+    width: 100%;
+  }
+
+  .tutorial-key-icon {
+    width: 70px;
+    flex-shrink: 0;
+  }
+
+  .spin-container {
+    width: calc(100vw - 2rem);
+    max-width: none;
+    max-height: calc(100vh - 2rem);
+    overflow-y: auto;
+    padding: 1.25rem;
+  }
+
+  .spin-wheel-wrapper {
+    width: min(400px, 75vw);
+    height: min(400px, 75vw);
+  }
+
+  .spin-result-card {
+    width: calc(100vw - 2rem);
+    max-height: calc(100vh - 2rem);
+    overflow-y: auto;
+    padding: 2.5rem 1.25rem 1.5rem;
+  }
+
+  .settings-panel,
+  .entry-card {
+    max-width: calc(100vw - 2rem);
+  }
+
+  .notification-box {
+    max-width: calc(100vw - 1.5rem);
+  }
+}
+
+@media (max-width: 480px) {
+  .hub-content {
+    padding: 0.75rem;
+  }
+
+  .navbar {
+    align-items: center;
+  }
+
+  .nav-logo {
+    min-width: 0;
+  }
+
+  .nav-btn {
+    flex-shrink: 0;
+  }
+
+  .nav-greeting {
+    flex: 1 1 100%;
+    order: 3;
+  }
+
+  .nav-best {
+    order: 4;
+    margin-left: 0;
+  }
+
+  .hero {
+    padding: 0.85rem;
+  }
+
+  .hero-avatar {
+    width: 64px;
+    height: 64px;
+  }
+
+  .hero-name {
+    font-size: 1.2rem;
+  }
+
+  .stat-chip {
+    padding: 0.35rem 0.5rem;
+    font-size: 0.7rem;
+  }
+
+  .games-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .game-banner {
+    height: 120px;
+  }
+
+  .game-card-info {
+    padding: 0.9rem;
+  }
+
+  .section-title {
+    font-size: 1rem;
+  }
+
+  .dpad {
+    left: 10px;
+    bottom: 10px;
+    grid-template-columns: 46px 46px 46px;
+    grid-template-rows: 46px 46px 46px;
+  }
+
+  .space-slider-wrap {
+    width: calc(100% - 120px);
+    bottom: 105px;
+  }
+
+  .space-bottom-row {
+    left: 10px;
+    bottom: 10px;
+  }
+
+  .mobile-btn-lg {
+    width: 52px;
+    height: 52px;
+  }
+
+  .mobile-btn-bomb {
+    width: 48px;
+    height: 48px;
+  }
+
+  .fire-btn {
+    right: 10px;
+    bottom: 10px;
+    width: 58px;
+    height: 58px;
+  }
+
+  .overlay-title {
+    font-size: 1.5rem;
+  }
+
+  .overlay-score {
+    font-size: 1.1rem;
+  }
+}
+
+@media (max-width: 360px) {
+  .hub-content {
+    padding: 0.5rem;
+  }
+
+  .navbar {
+    padding: 0.5rem;
+  }
+
+  .hero {
+    padding: 0.7rem;
+  }
+
+  .hero-avatar {
+    width: 56px;
+    height: 56px;
+  }
+
+  .game-banner {
+    height: 105px;
+  }
+
+  .filter-btn {
+    padding: 0.45rem 0.7rem;
+    font-size: 0.68rem;
+  }
+
+  .dpad {
+    grid-template-columns: 40px 40px 40px;
+    grid-template-rows: 40px 40px 40px;
+  }
+
+  .fire-btn {
+    width: 52px;
+    height: 52px;
+    font-size: 1.3rem;
+  }
+}

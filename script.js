@@ -275,15 +275,26 @@ function saveState(){localStorage.setItem('hw_state',JSON.stringify(STATE))}
 function loadState(){
   const s=localStorage.getItem('hw_state');
   if(s){
-    const d=JSON.parse(s);
-    Object.assign(STATE,d);
+    let d;
+    try {
+      d=JSON.parse(s);
+      if(!d || typeof d!=='object' || Array.isArray(d)) throw new TypeError('Invalid saved state');
+    } catch {
+      try { localStorage.removeItem('hw_state'); } catch {}
+    }
+
+    if(d){
+      Object.assign(STATE,d);
+    }
     
     // Ensure all default best scores exist (backwards compatibility for old saved states)
     const defaultBestScores = {space:0,flappy:0,asteroid:0,whack:0,dino:0,zombie:0,snake:0};
-    STATE.bestScores = Object.assign({}, defaultBestScores, STATE.bestScores);
+    const bestScores = STATE.bestScores && typeof STATE.bestScores==='object' && !Array.isArray(STATE.bestScores) ? STATE.bestScores : {};
+    STATE.bestScores = Object.assign({}, defaultBestScores, bestScores);
     
     const defaultDailyChallenge = {lastCompleted: null, progress: 0, claimed: false};
-    STATE.dailyChallenge = Object.assign({}, defaultDailyChallenge, STATE.dailyChallenge);
+    const dailyChallenge = STATE.dailyChallenge && typeof STATE.dailyChallenge==='object' && !Array.isArray(STATE.dailyChallenge) ? STATE.dailyChallenge : {};
+    STATE.dailyChallenge = Object.assign({}, defaultDailyChallenge, dailyChallenge);
   }
   // Reset daily challenge if it's a new day
   const today = new Date().toDateString();

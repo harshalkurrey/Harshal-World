@@ -1806,7 +1806,7 @@ GAMES.whack={
     const ox=(W-pw)/2,oy=(H-ph)/2+20,cw=pw/cols,ch=ph/rows;
     this.holes.forEach((h,i)=>{
       h.x=ox+cw*(i%3)+cw/2;h.y=oy+ch*Math.floor(i/3)+ch*.7;
-      if(h.active&&!h.whacked){h.anim=Math.min(1,h.anim+.12);h.timer--;if(h.timer<=0){h.active=false;h.anim=0;this.misses++;setLives(Math.max(0,3-Math.floor(this.misses/3)))}}
+      if(h.active&&!h.whacked){h.anim=Math.min(1,h.anim+.12);h.timer--;if(h.timer<=0){h.active=false;h.anim=0;this.misses++;const lives=Math.max(0,3-Math.floor(this.misses/3));setLives(lives);if(lives<=0){clearInterval(whackInterval);clearTimeout(whackTimer);endGame(this.score,'Whack-a-Mole');return;}}}
       if(h.whacked){h.whackAnim+=.15;if(h.whackAnim>=1){h.active=false;h.whacked=false;h.anim=0;h.whackAnim=0}}
     });
   },

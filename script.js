@@ -15,8 +15,10 @@ const STATE = {
   theme: 'default',
   coins: 0,
   dailyChallenge: {
-    lastCompleted: null,
+    date: null,
+    challengeId: null,
     progress: 0,
+    completed: false,
     claimed: false
   }
   
@@ -43,6 +45,12 @@ const QUOTES = [
 const LEVELS_XP = [{name:'ROOKIE',min:0,max:500},{name:'PLAYER',min:500,max:2000},{name:'PRO',min:2000,max:5000},{name:'LEGEND',min:5000,max:Infinity}];
 const AVATAR_STYLES = ['adventurer','adventurer-neutral','avataaars','big-ears','big-ears-neutral','bottts','croodles','fun-emoji','icons','identicon','initials','lorelei','micah','miniavs','notionists','open-peeps','personas','pixel-art','shapes'];
 const GAME_NAMES = {space:'SPACE SHOOTER',flappy:'FLAPPY BIRD',asteroid:'ASTEROID DODGE',whack:'WHACK-A-MOLE',dino:'DINO JUMP',zombie:'ZOMBIE SHOOTER',snake:'SNAKE GAME'};
+const DAILY_CHALLENGES = [
+  {id:'play_games',name:'Arcade Warm-Up',description:'Play 3 games',target:3,reward:50,type:'games'},
+  {id:'space_score',name:'Space Commander',description:'Score 100 in Space Shooter',target:100,reward:50,type:'score',game:'space'},
+  {id:'snake_score',name:'Snake Charmer',description:'Score 50 in Snake',target:50,reward:50,type:'score',game:'snake'},
+  {id:'dino_survival',name:'Dino Survivor',description:'Survive 30 seconds in Dino Jump',target:30,reward:50,type:'time',game:'dino'}
+];
 
 // ===== AUDIO ENGINE =====
 let audioCtx;
@@ -282,15 +290,10 @@ function loadState(){
     const defaultBestScores = {space:0,flappy:0,asteroid:0,whack:0,dino:0,zombie:0,snake:0};
     STATE.bestScores = Object.assign({}, defaultBestScores, STATE.bestScores);
     
-    const defaultDailyChallenge = {lastCompleted: null, progress: 0, claimed: false};
+    const defaultDailyChallenge = {date: null, challengeId: null, progress: 0, completed: false, claimed: false};
     STATE.dailyChallenge = Object.assign({}, defaultDailyChallenge, STATE.dailyChallenge);
   }
-  // Reset daily challenge if it's a new day
-  const today = new Date().toDateString();
-  if (STATE.dailyChallenge && STATE.dailyChallenge.lastCompleted !== today) {
-    STATE.dailyChallenge.progress = 0;
-    STATE.dailyChallenge.claimed = false;
-  }
+  setDailyChallengeForToday();
 }
 loadState();
 
@@ -358,7 +361,6 @@ function loadHub(){
   document.getElementById('bestCombo').textContent=STATE.bestCombo+'x';
   document.getElementById('totalXp').textContent=STATE.xp;
   document.querySelectorAll('.best-score').forEach(el=>{el.textContent=STATE.bestScores[el.dataset.game]||0});
-  renderLeaderboard();
   renderLeaderboard();
   renderAchievements();
   document.getElementById('settingsName').value=STATE.name;
@@ -456,46 +458,68 @@ function addXp(amount){
 }
 
 // Daily Challenge Functions
-function markDailyChallengeProgress() {
-  // No longer needed since there's no task requirement
+function getDailyChallenge(date = new Date()) {
+  const dateKey = date.toDateString();
+  const dayNumber = dateKey.split('').reduce((total, character) => total + character.charCodeAt(0), 0);
+  return DAILY_CHALLENGES[dayNumber % DAILY_CHALLENGES.length];
 }
 
-function canClaimDailyReward() {
+function setDailyChallengeForToday() {
   const today = new Date().toDateString();
-  return STATE.dailyChallenge.lastCompleted !== today && !STATE.dailyChallenge.claimed;
+  const challenge = getDailyChallenge();
+  if (STATE.dailyChallenge.date !== today || STATE.dailyChallenge.challengeId !== challenge.id) {
+    STATE.dailyChallenge = {date:today, challengeId:challenge.id, progress:0, completed:false, claimed:false};
+    saveState();
+  }
+}
+
+function updateDailyChallengeProgress(action) {
+  setDailyChallengeForToday();
+  const challenge = getDailyChallenge();
+  const daily = STATE.dailyChallenge;
+  if (daily.completed) return;
+
+  if (challenge.type === 'games' && action.type === 'game') {
+    daily.progress++;
+  } else if (challenge.type === 'score' && action.game === challenge.game) {
+    daily.progress = Math.max(daily.progress, action.value);
+  } else if (challenge.type === 'time' && action.game === challenge.game) {
+    daily.progress = Math.max(daily.progress, Math.floor(action.value));
+  } else {
+    return;
+  }
+
+  daily.progress = Math.min(daily.progress, challenge.target);
+  if (daily.progress >= challenge.target) {
+    daily.completed = true;
+    if (!daily.claimed) {
+      STATE.coins += challenge.reward;
+      daily.claimed = true;
+      showToast('🎉 Daily Challenge Complete! +' + challenge.reward + ' Coins', 'success');
+    }
+  }
+  saveState();
+  updateDailyChallengeUI();
 }
 
 function updateDailyChallengeUI() {
+  setDailyChallengeForToday();
+  const challenge = getDailyChallenge();
   const taskCheck = document.getElementById('taskCheck');
   const claimBtn = document.getElementById('claimRewardBtn');
+  const name = document.getElementById('dailyChallengeName');
+  const description = document.getElementById('dailyChallengeDescription');
+  const progress = document.getElementById('dailyChallengeProgress');
   if (taskCheck && claimBtn) {
-    const canClaim = canClaimDailyReward();
-    // Always show as completed since there's no task requirement
-    taskCheck.textContent = '✅';
-    taskCheck.style.color = '#10B981';
-    claimBtn.disabled = !canClaim;
-    // Ensure event listener is attached only once
-    if (!claimBtn.hasAttribute('data-listener-attached')) {
-      claimBtn.addEventListener('click', claimDailyReward);
-      claimBtn.setAttribute('data-listener-attached', 'true');
-    }
+    const completed = STATE.dailyChallenge.completed;
+    taskCheck.textContent = completed ? '✅' : '○';
+    taskCheck.style.color = completed ? '#10B981' : 'var(--text2)';
+    claimBtn.disabled = true;
+    claimBtn.textContent = completed ? '✅ REWARD CLAIMED' : '🎁 COMPLETE CHALLENGE';
   }
-}
-
-function claimDailyReward() {
-  if (!canClaimDailyReward()) {
-    showToast('❌ Complete the task first!', 'error');
-    return;
-  }
-  STATE.coins += 50;
-  STATE.dailyChallenge.claimed = true;
-  STATE.dailyChallenge.lastCompleted = new Date().toDateString();
-  STATE.dailyChallenge.progress = 0; // Reset for next day
-  saveState();
-  updateDailyChallengeUI();
-  loadHub(); // Update coins display
-  // Show popup or notification
-  showToast('🎉 Daily Reward Claimed! +50 Coins', 'success');
+  if (name) name.textContent = challenge.name;
+  if (description) description.textContent = challenge.description;
+  if (progress) progress.textContent = 'Progress: ' + STATE.dailyChallenge.progress + ' / ' + challenge.target;
 }
 
 function showToast(message, type = 'info') {
@@ -706,10 +730,11 @@ function launchGame(game){
   requestAnimationFrame(()=>resizeCanvas());
   showMobileControls(game);
   if(game === 'snake'){
-  gameRunning = true;
-  GAMES.snake.start();
-  return;
-}
+    if(!('ontouchstart' in window)&&document.getElementById('snakeTutorial')){
+      document.getElementById('snakeTutorial').classList.remove('hidden');
+      return;
+    }
+  }
 
   // Space Shooter: show tutorial on desktop before starting
   if(game==='space'&&!('ontouchstart' in window)){
@@ -729,15 +754,9 @@ function launchGame(game){
     return; // game starts after Continue click
   }
 
-  // Snake Game: show tutorial on desktop before starting
-  if(game==='snake'&&!('ontouchstart' in window)){
-  if(document.getElementById('snakeTutorial'))
-    document.getElementById('snakeTutorial').classList.remove('hidden');
-  return;
-}
-
   gameRunning=true;
   STATE.gamesPlayed++;saveState();
+  updateDailyChallengeProgress({type:'game'});
   checkAchievements();
   GAMES[game]?.start();
 }
@@ -747,6 +766,7 @@ document.getElementById('spaceTutorialBtn').onclick=()=>{
   document.getElementById('spaceTutorial').classList.add('hidden');
   gameRunning=true;
   STATE.gamesPlayed++;saveState();
+  updateDailyChallengeProgress({type:'game'});
   checkAchievements();
   GAMES.space?.start();
 };
@@ -756,6 +776,7 @@ document.getElementById('asteroidTutorialBtn').onclick=()=>{
   document.getElementById('asteroidTutorial').classList.add('hidden');
   gameRunning=true;
   STATE.gamesPlayed++;saveState();
+  updateDailyChallengeProgress({type:'game'});
   GAMES.asteroid?.start();
 };
 
@@ -765,6 +786,7 @@ if(document.getElementById('zombieTutorialBtn')){
     document.getElementById('zombieTutorial').classList.add('hidden');
     gameRunning=true;
     STATE.gamesPlayed++;saveState();
+    updateDailyChallengeProgress({type:'game'});
     GAMES.zombie?.start();
   };
 }
@@ -791,6 +813,7 @@ function spawnConfetti(){
 }
 function endGame(score,gameName){
   gameRunning=false;
+  updateDailyChallengeProgress({game:currentGame,value:score});
   const isHighScore=score>(STATE.bestScores?.[currentGame]||0);
   if(isHighScore){
     if(!STATE.bestScores)STATE.bestScores={};
@@ -2160,6 +2183,7 @@ GAMES.dino=(function(){
     // delayed game over
     setTimeout(()=>{
       if(state==='dead'){
+        updateDailyChallengeProgress({game:'dino',value:frameCount/60});
         const xpGained=Math.floor(score/10);
         addXp(xpGained);
         addToLeaderboard('Dino Jump',score);

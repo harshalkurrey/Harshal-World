@@ -1063,6 +1063,13 @@ body[class*="theme-"] {
   color: var(--text);
 }
 
+.task-description,
+.task-progress {
+  color: var(--text2);
+  font-size: .8rem;
+  margin-top: .2rem;
+}
+
 .claim-reward-btn {
   background: linear-gradient(45deg, #ff6b6b, #4ecdc4);
   color: white;

@@ -683,6 +683,19 @@ function stopGame(){
     GAMES.snake.stop();
   }
 
+  // Detach per-game input handlers so quitting mid-game does not leak them
+  // into the next game. cleanup/stop are safe to call twice.
+  try{
+    if(currentGame === 'flappy' && GAMES.flappy && typeof GAMES.flappy.cleanup === 'function'){
+      GAMES.flappy.cleanup();
+    }
+  }catch(e){}
+  try{
+    if(currentGame === 'zombie' && GAMES.zombie && typeof GAMES.zombie.stop === 'function'){
+      GAMES.zombie.stop();
+    }
+  }catch(e){}
+
   gameCanvasWrap.classList.remove('dino-mobile-split');
 
   clearGame();
@@ -1426,7 +1439,12 @@ GAMES.flappy = {
       requestAnimationFrame(() => this.loop());
     };
 
-    // Input Listeners
+    // Input Listeners - remove any stale handlers from a previous session first
+    // so relaunching does not stack duplicate flaps.
+    try{
+      if(this._flap) document.removeEventListener('click', this._flap);
+      if(this._onKeyDown) window.removeEventListener('keydown', this._onKeyDown);
+    }catch(e){}
     document.addEventListener('click', this._flap = () => this.handleInput(), { once: false });
     
     // Named reference for keydown so we can remove it later
@@ -1577,8 +1595,12 @@ GAMES.flappy = {
   },
 
   cleanup() {
-    document.removeEventListener('click', this._flap);
-    window.removeEventListener('keydown', this._onKeyDown);
+    try{
+      if(this._flap) document.removeEventListener('click', this._flap);
+      if(this._onKeyDown) window.removeEventListener('keydown', this._onKeyDown);
+    }catch(e){}
+    this._flap=null;
+    this._onKeyDown=null;
   },
 
   loop() {
@@ -2681,6 +2703,13 @@ GAMES.zombie = {
     this.bullets = []; this.zombies = []; this.particles = [];
     this.player = { x: W/2, y: H/2, w: 32, h: 32, vx: 0, vy: 0, speed: 4 };
     setScore(0); setLives(3); resetCombo();
+    // Clear any handler left over from a previous session before adding.
+    try{
+      if(this.mouseHandler){
+        gameCanvas.removeEventListener('mousedown', this.mouseHandler);
+        gameCanvas.removeEventListener('touchstart', this.mouseHandler);
+      }
+    }catch(e){}
     gameLoop = requestAnimationFrame(() => this.loop());
     
     this.mouseHandler = (e) => this.shoot(e);
@@ -2689,8 +2718,13 @@ GAMES.zombie = {
   },
 
   stop() {
-    gameCanvas.removeEventListener('mousedown', this.mouseHandler);
-    gameCanvas.removeEventListener('touchstart', this.mouseHandler);
+    try{
+      if(this.mouseHandler){
+        gameCanvas.removeEventListener('mousedown', this.mouseHandler);
+        gameCanvas.removeEventListener('touchstart', this.mouseHandler);
+      }
+    }catch(e){}
+    this.mouseHandler=null;
   },
 
   shoot(e) {

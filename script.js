@@ -2956,10 +2956,27 @@ GAMES.snake = {
       gameCanvas.height / this.gridSize
     );
 
-    this.food = {
-      x: Math.floor(Math.random() * cols),
-      y: Math.floor(Math.random() * rows)
-    };
+    // Keep food off the snake body so it is always visible and reachable.
+    // Fall back to a scan when the board is nearly full.
+    let x=0,y=0,tries=0;
+    do{
+      x = Math.floor(Math.random() * cols);
+      y = Math.floor(Math.random() * rows);
+      tries++;
+      if(tries>200) break;
+    }while(this.snake.some(p=>p.x===x&&p.y===y));
+
+    if(this.snake.some(p=>p.x===x&&p.y===y)){
+      let found=false;
+      for(let yy=0;yy<rows&&!found;yy++){
+        for(let xx=0;xx<cols&&!found;xx++){
+          if(!this.snake.some(p=>p.x===xx&&p.y===yy)){x=xx;y=yy;found=true;}
+        }
+      }
+      if(!found){x=0;y=0;}
+    }
+
+    this.food = {x:x,y:y};
   },
 
   update(){
@@ -2997,8 +3014,11 @@ GAMES.snake = {
       return;
     }
 
-    // Self collision
-    for(let part of this.snake){
+    // Self collision - ignore the tail cell that vacates this tick
+    // unless we are growing by eating. Moving into the old tail is safe.
+    const willEat = this.food && head.x === this.food.x && head.y === this.food.y;
+    const bodyToCheck = willEat ? this.snake : this.snake.slice(0, -1);
+    for(let part of bodyToCheck){
 
       if(
         part.x === head.x &&
@@ -3013,8 +3033,7 @@ GAMES.snake = {
 
     // Food eaten
     if(
-      head.x === this.food.x &&
-      head.y === this.food.y
+      willEat
     ){
 
       this.score += 10;

@@ -1814,8 +1814,9 @@ GAMES.whack={
     this.holes.forEach(h=>{
       if(h.active&&!h.whacked&&Math.sqrt((ex-h.x)**2+(ey-h.y)**2)<35){
         h.whacked=true;h.whackAnim=0;
-        this.score+=Math.max(1,addCombo());setScore(this.score);SFX.whack();
-        showFloatingText(gameCanvasWrap,'+'+(addCombo()));
+        const c=addCombo();
+        this.score+=Math.max(1,c);setScore(this.score);SFX.whack();
+        showFloatingText(gameCanvasWrap,'+'+c);
       }
     });
   },

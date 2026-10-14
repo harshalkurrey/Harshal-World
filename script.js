@@ -707,6 +707,8 @@ function launchGame(game){
   showMobileControls(game);
   if(game === 'snake'){
   gameRunning = true;
+  STATE.gamesPlayed++;saveState();
+  checkAchievements();
   GAMES.snake.start();
   return;
 }

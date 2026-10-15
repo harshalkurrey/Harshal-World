@@ -1101,12 +1101,14 @@ GAMES.space={
     this.enemies.forEach(e=>{
       e.frame++;e.shootCooldown--;
       if(e.moveType==='zigzag'){
-        e.x=e.baseX+Math.sin(e.frame*e.frequency)*e.amplitude;
+        e.x=Math.max(0,Math.min(W-e.w,
+          e.baseX+Math.sin(e.frame*e.frequency)*e.amplitude));
         e.y+=e.vy;
       }else if(e.moveType==='orbit'){
         if(e.frame<e.orbitDuration){
           e.y+=(e.orbitY-e.y)*0.05;
-          e.x=e.orbitX+Math.cos(e.frame*0.05)*e.orbitRadius;
+          e.x=Math.max(0,Math.min(W-e.w,
+            e.orbitX+Math.cos(e.frame*0.05)*e.orbitRadius));
         }else{
           if(e.frame===Math.floor(e.orbitDuration)){
             const dx=(p.x+p.w/2)-(e.x+e.w/2);

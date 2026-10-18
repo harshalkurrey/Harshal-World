@@ -359,7 +359,6 @@ function loadHub(){
   document.getElementById('totalXp').textContent=STATE.xp;
   document.querySelectorAll('.best-score').forEach(el=>{el.textContent=STATE.bestScores[el.dataset.game]||0});
   renderLeaderboard();
-  renderLeaderboard();
   renderAchievements();
   document.getElementById('settingsName').value=STATE.name;
   document.getElementById('soundToggle').classList.toggle('on',STATE.soundOn);

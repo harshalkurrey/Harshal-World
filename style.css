@@ -82,9 +82,10 @@ canvas{display:block}
 #level-screen{flex-direction:column;gap:1.5rem;z-index:20}
 .level-title{font-family:'Orbitron',sans-serif;font-size:1.6rem;font-weight:900;text-align:center;background:linear-gradient(135deg,var(--neon2),var(--cyan));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
 .level-cards{display:flex;gap:1rem;flex-wrap:wrap;justify-content:center}
-.level-card{background:var(--glass2);border:1px solid var(--border);border-radius:20px;padding:1.8rem 1.5rem;width:160px;text-align:center;cursor:pointer;transition:all .3s;backdrop-filter:blur(20px)}
+.level-card{appearance:none;background:var(--glass2);border:1px solid var(--border);border-radius:20px;padding:1.8rem 1.5rem;width:160px;text-align:center;color:var(--text);font:inherit;cursor:pointer;transition:all .3s;backdrop-filter:blur(20px)}
 .level-card:hover{transform:translateY(-5px);border-color:var(--purple2);box-shadow:var(--glow)}
 .level-card.selected{border-color:var(--neon);background:rgba(124,58,237,0.15);box-shadow:0 0 30px rgba(168,85,247,0.4)}
+.level-card:focus-visible,.pause-item:focus-visible{outline:3px solid var(--cyan);outline-offset:3px}
 .level-icon{font-size:2.5rem;margin-bottom:.8rem}
 .level-name{font-family:'Orbitron',sans-serif;font-size:.85rem;font-weight:700;margin-bottom:.4rem}
 .level-desc{font-size:.72rem;color:var(--text2);line-height:1.5}
@@ -254,7 +255,8 @@ body.light-theme .game-overlay{background:rgba(15,23,42,0.55)}
 .overlay-score{font-family:'Orbitron',sans-serif;font-size:1.4rem;color:var(--yellow);margin-bottom:1.5rem}
 .overlay-btns{display:flex;gap:1rem;flex-wrap:wrap;justify-content:center}
 .pause-menu-items{display:flex;flex-direction:column;gap:.8rem;margin-bottom:1.5rem;width:200px}
-.pause-item{text-align:center;padding:.7rem;background:var(--glass2);border:1px solid var(--border);border-radius:12px;font-size:.85rem;color:var(--text2)}
+.pause-item{appearance:none;text-align:center;padding:.7rem;background:var(--glass2);border:1px solid var(--border);border-radius:12px;font:inherit;font-size:.85rem;color:var(--text2);cursor:pointer}
+.pause-item:hover{border-color:var(--purple2);color:var(--text)}
 
 @keyframes floatIn{from{opacity:0;transform:translateX(-50%) translateY(20px)}to{opacity:1;transform:translateX(-50%) translateY(0)}}
 

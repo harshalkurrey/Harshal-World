@@ -64,6 +64,7 @@
       </div>
     </div>  
     </div>  
+  </div>
 
   <!-- LEVEL SELECT SCREEN -->
   <div class="screen hidden" id="level-screen">
@@ -71,21 +72,21 @@
     <div style="font-size:.85rem;color:var(--text2);text-align:center;margin:-1rem 0 1rem">Select your experience level
     </div>
     <div class="level-cards">
-      <div class="level-card" data-level="beginner">
+      <button type="button" class="level-card" data-level="beginner">
         <div class="level-icon">🌱</div>
         <div class="level-name">BEGINNER</div>
         <div class="level-desc">Show me the controls. Easy mode with tutorials.</div>
-      </div>
-      <div class="level-card" data-level="intermediate">
+      </button>
+      <button type="button" class="level-card" data-level="intermediate">
         <div class="level-icon">⚡</div>
         <div class="level-name">INTERMEDIATE</div>
         <div class="level-desc">I know games. Normal challenge awaits.</div>
-      </div>
-      <div class="level-card" data-level="pro">
+      </button>
+      <button type="button" class="level-card" data-level="pro">
         <div class="level-icon">💀</div>
         <div class="level-name">PRO</div>
         <div class="level-desc">No tutorials. Max speed. Bring it on.</div>
-      </div>
+      </button>
     </div>
   </div>
 
@@ -201,7 +202,7 @@
             <button class="play-now-btn">▶ PLAY NOW</button>
           </div>
         </div>
-        <div class="game-card" data-game="dino" data-category="dino">
+        <div class="game-card" data-game="dino" data-category="arcade">
           <div class="game-banner banner-dino">🦕</div>
           <div class="game-card-info">
             <div class="game-name">DINO JUMP</div>
@@ -338,9 +339,9 @@
       <div class="game-overlay hidden" id="pauseOverlay">
         <div class="overlay-title">PAUSED</div>
         <div class="pause-menu-items">
-          <div class="pause-item" id="resumeBtn" style="cursor:pointer;color:var(--neon2)">▶ Resume</div>
-          <div class="pause-item" id="restartBtn" style="cursor:pointer">↩ Restart</div>
-          <div class="pause-item" id="quitBtn" style="cursor:pointer;color:var(--red)">✕ Quit to Hub</div>
+          <button type="button" class="pause-item" id="resumeBtn" style="color:var(--neon2)">▶ Resume</button>
+          <button type="button" class="pause-item" id="restartBtn">↩ Restart</button>
+          <button type="button" class="pause-item" id="quitBtn" style="color:var(--red)">✕ Quit to Hub</button>
         </div>
       </div>
       <!-- Game Over Overlay -->
@@ -373,8 +374,7 @@
         <div class="fire-btn" id="fireBtn">🔥</div>
       </div>
 
-      <!-- Mobile Controls: Asteroid Dodge -->git add .
-git commit -m "Merge remote main branch into local main"
+      <!-- Mobile Controls: Asteroid Dodge -->
       <div class="mobile-controls" id="mobileAsteroid">
         <div class="dpad">
           <div class="dpad-btn dpad-up" data-dir="up">▲</div>

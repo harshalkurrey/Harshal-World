@@ -42,7 +42,7 @@ const QUOTES = [
 
 const LEVELS_XP = [{name:'ROOKIE',min:0,max:500},{name:'PLAYER',min:500,max:2000},{name:'PRO',min:2000,max:5000},{name:'LEGEND',min:5000,max:Infinity}];
 const AVATAR_STYLES = ['adventurer','adventurer-neutral','avataaars','big-ears','big-ears-neutral','bottts','croodles','fun-emoji','icons','identicon','initials','lorelei','micah','miniavs','notionists','open-peeps','personas','pixel-art','shapes'];
-const GAME_NAMES = {space:'SPACE SHOOTER',flappy:'FLAPPY BIRD',asteroid:'ASTEROID DODGE',whack:'WHACK-A-MOLE',dino:'DINO JUMP',zombie:'ZOMBIE SHOOTER',snake:'SNAKE GAME'};
+const GAME_NAMES = {space:'SPACE SHOOTER',flappy:'FLAPPY BIRD',asteroid:'ASTEROID DODGE',whack:'WHACK A BEAR',dino:'DINO JUMP',zombie:'ZOMBIE SHOOTER',snake:'SNAKE GAME'};
 
 // ===== AUDIO ENGINE =====
 let audioCtx;
@@ -132,6 +132,7 @@ function runLoading(){
 
     if(p>=100){
   clearInterval(interval);
+  clearInterval(quoteInterval);
   setTimeout(()=>{
     if(STATE.name){
       loadHub();
@@ -143,7 +144,7 @@ function runLoading(){
 }
 },60);
   
-  setInterval(()=>{
+  const quoteInterval=setInterval(()=>{
     quote.style.opacity='0';
     setTimeout(()=>{quote.textContent=QUOTES[qi++%QUOTES.length];quote.style.opacity='1'},400);
   },1800);
@@ -365,6 +366,7 @@ function loadHub(){
   document.getElementById('soundToggle').classList.toggle('on',STATE.soundOn);
   document.getElementById('soundToggleNav').textContent=STATE.soundOn?'🔊':'🔇';
   document.getElementById('volumeSlider').value=STATE.volume;
+  document.getElementById('volumeValue').textContent=Math.round(STATE.volume*100)+'%';
   applyTheme(STATE.theme || "default");
   updateDailyChallengeUI();
 }
@@ -610,6 +612,7 @@ document.getElementById('resetScores').onclick = () => {
   STATE.bestScores = {space:0,flappy:0,asteroid:0,whack:0,dino:0,zombie:0,snake:0};
   STATE.leaderboard = [];
   STATE.achievements = [];
+  STATE.coins = 0;
 
   saveState();
   loadHub();
@@ -694,15 +697,17 @@ function togglePause(){
 }
 function launchGame(game){
   currentGame=game;stopGame();
-  document.getElementById('hudGameName').textContent=
-{
-  space:'SPACE SHOOTER',flappy:'FLAPPY BIRD',asteroid:'ASTEROID DODGE',whack:'WHACK-A-MOLE',dino:'DINO JUMP',zombie:'ZOMBIE SHOOTER',snake:'SNAKE GAME'}[game];
+  document.getElementById('hudGameName').textContent=GAME_NAMES[game];
   document.getElementById('pauseOverlay').classList.add('hidden');
+  document.getElementById('pauseBtn').textContent='⏸';
   document.getElementById('gameOverOverlay').classList.add('hidden');
   document.getElementById('spaceTutorial').classList.add('hidden');
   document.getElementById('asteroidTutorial').classList.add('hidden');
+  document.getElementById('flappyTutorial').classList.add('hidden');
   if(document.getElementById('zombieTutorial'))document.getElementById('zombieTutorial').classList.add('hidden');
   showScreen('game-screen');
+  // Size the canvas now: start() below reads gameCanvas.width/height to place everything
+  resizeCanvas();
   requestAnimationFrame(()=>resizeCanvas());
   showMobileControls(game);
   if(game === 'snake'){
@@ -815,6 +820,13 @@ document.addEventListener('keydown',e=>{
   if(e.key===' ')e.preventDefault();
 });
 document.addEventListener('keyup',e=>{keys[e.key]=false});
+// ESC pauses/resumes, as promised in the tutorials (ignored while a tutorial is open)
+document.addEventListener('keydown',e=>{
+  if(e.key!=='Escape'||!gameRunning)return;
+  if(document.getElementById('game-screen').classList.contains('hidden'))return;
+  if(document.querySelector('.tutorial-overlay:not(.hidden)'))return;
+  togglePause();
+});
 // D-Pad buttons (asteroid)
 document.querySelectorAll('.dpad-btn').forEach(btn=>{
   const dir=btn.dataset.dir;if(!dir)return;
@@ -2155,16 +2167,17 @@ GAMES.dino=(function(){
         size:Math.random()*4+2
       });
     }
-    // save high score
-    if(score>hiScore){hiScore=score;if(STATE.bestScores){STATE.bestScores.dino=hiScore;saveState();}}
-    // delayed game over
+    // save high score (compare before updating, so tying the best is not a new record)
+    const isHigh=score>hiScore;
+    if(isHigh){hiScore=score;if(STATE.bestScores){STATE.bestScores.dino=hiScore;saveState();}}
+    // record the run now, so it still counts if the player leaves during the death animation
+    const xpGained=Math.floor(score/10);
+    addXp(xpGained);
+    addToLeaderboard('dino',score);
+    STATE.totalScore+=score;saveState();
+    // delayed game over, only if this Dino run is still the one on screen
     setTimeout(()=>{
-      if(state==='dead'){
-        const xpGained=Math.floor(score/10);
-        addXp(xpGained);
-        addToLeaderboard('Dino Jump',score);
-        STATE.totalScore+=score;saveState();
-        const isHigh=score>=hiScore;
+      if(state==='dead'&&currentGame==='dino'&&gameRunning){
         const overlay=document.getElementById('gameOverOverlay');
         document.getElementById('gameOverTitle').textContent=isHigh?'🏆 NEW HIGH SCORE!':'GAME OVER';
         document.getElementById('gameOverScore').textContent='Score: '+score;
@@ -2667,7 +2680,7 @@ window.addEventListener('load',()=>{
     runLoading();
   }
 });
-window.addEventListener('resize',()=>{if(gameRunning){resizeCanvas()}});
+window.addEventListener('resize',()=>{if(!document.getElementById('game-screen').classList.contains('hidden')){resizeCanvas()}});
 
 // ============================================================
 // ZOMBIE SHOOTER — Survival Top-Down
@@ -3098,9 +3111,6 @@ GAMES.snake = {
     );
   }
 };
-
-
-// ===== SEARCH & FILTER LOGIC =====
 
 
 // ===== SEARCH & FILTER LOGIC =====

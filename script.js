@@ -46,7 +46,16 @@ const GAME_NAMES = {space:'SPACE SHOOTER',flappy:'FLAPPY BIRD',asteroid:'ASTEROI
 
 // ===== AUDIO ENGINE =====
 let audioCtx;
-function getAudio(){if(!audioCtx)audioCtx=new(window.AudioContext||window.webkitAudioContext)();return audioCtx;}
+function getAudio(){
+  if(!audioCtx)audioCtx=new(window.AudioContext||window.webkitAudioContext)();
+  // Browsers suspend the context (autoplay policy, backgrounded tab); wake it so sounds are not silently dropped
+  if(audioCtx.state!=='running')audioCtx.resume().catch(()=>{});
+  return audioCtx;
+}
+// resume() only succeeds during a user gesture, so also try on every tap/click/key while suspended
+['pointerdown','keydown'].forEach(ev=>document.addEventListener(ev,()=>{
+  if(audioCtx&&audioCtx.state!=='running')audioCtx.resume().catch(()=>{});
+},{passive:true}));
 function playTone(freq,type='sine',dur=0.1,vol=0.3,decay=true){
   if(!STATE.soundOn)return;
   try{
@@ -89,24 +98,34 @@ function initParticles(){
     r:Math.random()*2+1,alpha:Math.random()*.5+.1
   });
 }
+const reduceMotion=window.matchMedia('(prefers-reduced-motion: reduce)');
+const gameScreenEl=document.getElementById('game-screen');
+let particleFrame=0;
+function scheduleParticles(){cancelAnimationFrame(particleFrame);particleFrame=requestAnimationFrame(drawParticles)}
 function drawParticles(){
   if(!pbCtx||!pbCanvas)return;
+  // A game covers the background completely, so skip the work while one is on screen
+  if(!gameScreenEl.classList.contains('hidden')){scheduleParticles();return}
+  const animate=!reduceMotion.matches;
   pbCtx.clearRect(0,0,pbCanvas.width,pbCanvas.height);
   particles.forEach(p=>{
-    const dx=p.x-mouse.x,dy=p.y-mouse.y,dist=Math.sqrt(dx*dx+dy*dy);
-    if(dist<100){p.vx+=dx/dist*.05;p.vy+=dy/dist*.05}
-    p.vx*=.99;p.vy*=.99;
-    p.x+=p.vx;p.y+=p.vy;
-    if(p.x<0||p.x>pbCanvas.width)p.vx*=-1;
-    if(p.y<0||p.y>pbCanvas.height)p.vy*=-1;
+    if(animate){
+      const dx=p.x-mouse.x,dy=p.y-mouse.y,dist=Math.sqrt(dx*dx+dy*dy);
+      if(dist<100&&dist>0){p.vx+=dx/dist*.05;p.vy+=dy/dist*.05}
+      p.vx*=.99;p.vy*=.99;
+      p.x+=p.vx;p.y+=p.vy;
+      if(p.x<0||p.x>pbCanvas.width)p.vx*=-1;
+      if(p.y<0||p.y>pbCanvas.height)p.vy*=-1;
+    }
     pbCtx.beginPath();pbCtx.arc(p.x,p.y,p.r,0,Math.PI*2);
     pbCtx.fillStyle=`rgba(124,58,237,${p.alpha})`;pbCtx.fill();
   });
   for(let i=0;i<particles.length;i++){
     for(let j=i+1;j<particles.length;j++){
       const dx=particles[i].x-particles[j].x,dy=particles[i].y-particles[j].y;
-      const d=Math.sqrt(dx*dx+dy*dy);
-      if(d<120){
+      const d2=dx*dx+dy*dy;
+      if(d2<14400){ // 120px, compared squared to avoid a sqrt for far pairs
+        const d=Math.sqrt(d2);
         pbCtx.beginPath();pbCtx.moveTo(particles[i].x,particles[i].y);
         pbCtx.lineTo(particles[j].x,particles[j].y);
         pbCtx.strokeStyle=`rgba(124,58,237,${.15*(1-d/120)})`;
@@ -114,11 +133,17 @@ function drawParticles(){
       }
     }
   }
-  requestAnimationFrame(drawParticles);
+  // With reduced motion the field is drawn once (and again after a resize) instead of animating
+  if(animate)scheduleParticles();
 }
 window.addEventListener('mousemove',e=>{mouse.x=e.clientX;mouse.y=e.clientY});
 resizeParticles();initParticles();drawParticles();
-window.addEventListener('resize',()=>{resizeParticles();initParticles()});
+let particleResizeTimer=null;
+window.addEventListener('resize',()=>{
+  clearTimeout(particleResizeTimer);
+  particleResizeTimer=setTimeout(()=>{resizeParticles();initParticles();scheduleParticles()},150);
+});
+reduceMotion.addEventListener('change',scheduleParticles);
 
 // ===== LOADING =====
 function runLoading(){
@@ -170,12 +195,22 @@ function buildAvatarStyles(){
   });
 }
 function dicebearUrl(style,seed){return`https://api.dicebear.com/7.x/${style}/svg?seed=${seed}&backgroundColor=transparent`}
+// Local image shown when an avatar can't load (offline, DiceBear blocked, empty saved avatar)
+const AVATAR_FALLBACK='assets/HARSHAL WORLD LOGO.jpeg';
+function useAvatarFallback(img){
+  img.addEventListener('error',()=>{
+    const fallback=new URL(AVATAR_FALLBACK,location.href).href;
+    if(img.src!==fallback)img.src=fallback;
+  });
+}
+useAvatarFallback(document.getElementById('selectedAvatarImg'));
+useAvatarFallback(document.getElementById('hubAvatar'));
 function loadAvatars(){
   const grid=document.getElementById('avatarGrid');grid.innerHTML='';
   for(let i=0;i<18;i++){
     const seed='user'+i,url=dicebearUrl(currentStyle,seed);
     const item=document.createElement('div');item.className='avatar-item'+(seed===selectedSeed?' selected':'');
-    const img=document.createElement('img');img.src=url;img.alt='avatar';img.loading='lazy';
+    const img=document.createElement('img');useAvatarFallback(img);img.src=url;img.alt='avatar';img.loading='lazy';
     item.appendChild(img);
     item.onclick=()=>{
       selectedSeed=seed;currentAvatarUrl=url;
@@ -339,7 +374,7 @@ function getRankClass(name){return{ROOKIE:'rank-rookie',PLAYER:'rank-player',PRO
 function loadHub(){
   document.getElementById('navName').textContent=STATE.name;
   document.getElementById('navBest').textContent=Math.max(...Object.values(STATE.bestScores),0);
-  document.getElementById('hubAvatar').src=STATE.avatar;
+  document.getElementById('hubAvatar').src=STATE.avatar||AVATAR_FALLBACK;
   document.getElementById('heroName').textContent=STATE.name;
   const rank=getRank();
   const badge=document.getElementById('rankBadge');
@@ -648,6 +683,8 @@ const gameCanvasWrap=document.getElementById('gameCanvasWrap');
 const gameCanvas=document.getElementById('gameCanvas');
 const dinoMobileHint=document.getElementById('dinoMobileHint');
 const gCtx=gameCanvas?gameCanvas.getContext('2d'):null;
+// Game area size in CSS pixels; games use these, the canvas backing store is scaled by devicePixelRatio
+let gameW=gameCanvas.width,gameH=gameCanvas.height;
 const DINO_MOBILE_PLAY_RATIO=0.62;
 const DINO_MOBILE_HUD_OFFSET=30;
 const DINO_MOBILE_TAP_HINT_Y=20;
@@ -664,8 +701,12 @@ function updateDinoMobileLayout(){
 }
 
 function resizeCanvas(){
-  gameCanvas.width=gameCanvasWrap.clientWidth;
-  gameCanvas.height=gameCanvasWrap.clientHeight;
+  const dpr=Math.min(2,window.devicePixelRatio||1);
+  gameW=gameCanvasWrap.clientWidth;
+  gameH=gameCanvasWrap.clientHeight;
+  gameCanvas.width=Math.round(gameW*dpr);
+  gameCanvas.height=Math.round(gameH*dpr);
+  gCtx.setTransform(dpr,0,0,dpr,0,0);
   updateDinoMobileLayout();
 }
 function stopGame(){
@@ -705,6 +746,8 @@ function launchGame(game){
   showScreen('game-screen');
   requestAnimationFrame(()=>resizeCanvas());
   showMobileControls(game);
+  // XP meter sits beside the lives and is only used by Space Shooter
+  document.getElementById('hudXp').classList.toggle('hidden',game!=='space');
   if(game === 'snake'){
   gameRunning = true;
   GAMES.snake.start();
@@ -853,7 +896,7 @@ document.getElementById('fireBtn').addEventListener('touchend',e=>{e.preventDefa
     thumb.style.left=(pct*100)+'%';
     // Move spaceship proportionally
     if(currentGame==='space'&&GAMES.space.player&&gameRunning){
-      const W=gameCanvas.width;
+      const W=gameW;
       GAMES.space.player.x=pct*(W-GAMES.space.player.w);
     }
   }
@@ -910,7 +953,7 @@ function setLives(n){
 }
 function updateXPDisplay(xp){
   const xpPercent=Math.min(100,Math.floor((xp/50)*100));
-  document.getElementById('hudLives').innerHTML=`<div style="text-align:center"><div style="font-size:12px;color:#EC4899;font-weight:bold;margin-bottom:4px">💎 XP</div><div style="background:#EF4444;height:6px;width:100px;border:2px solid #FFF;border-radius:3px;margin:0 auto;position:relative;overflow:hidden"><div style="background:#22C55E;height:100%;width:${xpPercent}%;transition:width 0.2s"></div></div><div style="font-size:10px;color:#FFF;margin-top:2px">${xp}/50</div></div>`;
+  document.getElementById('hudXp').innerHTML=`<div style="text-align:center"><div style="font-size:12px;color:#EC4899;font-weight:bold;margin-bottom:4px">💎 XP</div><div style="background:#EF4444;height:6px;width:100px;border:2px solid #FFF;border-radius:3px;margin:0 auto;position:relative;overflow:hidden"><div style="background:#22C55E;height:100%;width:${xpPercent}%;transition:width 0.2s"></div></div><div style="font-size:10px;color:#FFF;margin-top:2px">${xp}/50</div></div>`;
 }
 function setScore(n){document.getElementById('hudScore').textContent=n}
 
@@ -947,7 +990,7 @@ GAMES.space={
   player:null,lastMilestone:0,surpriseFlash:0,surpriseFlashColor:'#fff',freeze:0,enemyBullets:[],
 
   start(){
-    const W=gameCanvas.width,H=gameCanvas.height;
+    const W=gameW,H=gameH;
     this.score=0;this.lives=5;this.gameTime=0;this.diffLevel=0;this.bombs=0;
     this.tripleShot=false;this.tripleShotTimer=0;this.bigBullet=false;this.bigBulletTimer=0;
     this.bullets=[];this.enemies=[];this.particles=[];this.powerups=[];this.enemyBullets=[];this.freeze=0;
@@ -955,7 +998,7 @@ GAMES.space={
     this.puMsg='';this.puMsgTimer=0;this.bombFlash=0;this.lastMilestone=0;this.surpriseFlash=0;
     this.player={x:W/2,y:H-80,w:64,h:64,vx:0,vy:0,acc:1.2,fric:0.88,maxSpd:12,invincible:0,xp:0};
     this.stars=Array.from({length:80},()=>({x:Math.random()*W,y:Math.random()*H,s:Math.random()*2+.5,v:Math.random()*.8+.2}));
-    setScore(0);updateXPDisplay(0);resetCombo();
+    setScore(0);setLives(this.lives);updateXPDisplay(0);resetCombo();
     gameLoop=requestAnimationFrame(()=>this.loop());
   },
 
@@ -1001,7 +1044,7 @@ GAMES.space={
   },
 
   spawnEnemy(){
-    const W=gameCanvas.width,s=getDiffSettings(this.diffLevel);
+    const W=gameW,s=getDiffSettings(this.diffLevel);
     const spd=s.speed+Math.random()*0.3;
     const types=['straight','zigzag','orbit','flanker'];
     const mt=types[Math.floor(Math.random()*types.length)];
@@ -1037,7 +1080,7 @@ GAMES.space={
   },
 
   spawnPowerUp(){
-    const W=gameCanvas.width;
+    const W=gameW;
     const types=Object.keys(POWERUP_TYPES);
     const type=types[Math.floor(Math.random()*types.length)];
     const info=POWERUP_TYPES[type];
@@ -1056,7 +1099,7 @@ GAMES.space={
   },
 
   update(){
-    const W=gameCanvas.width,H=gameCanvas.height,p=this.player;
+    const W=gameW,H=gameH,p=this.player;
     this.gameTime++;
 
     if(keys['b']||keys['B']){this.useBomb();keys['b']=false;keys['B']=false}
@@ -1240,7 +1283,7 @@ GAMES.space={
   },
 
   draw(){
-    const W=gameCanvas.width,H=gameCanvas.height,p=this.player;
+    const W=gameW,H=gameH,p=this.player;
     const bg=gCtx.createLinearGradient(0,0,0,H);
     bg.addColorStop(0,'#020209');bg.addColorStop(1,'#1a0533');
     gCtx.fillStyle=bg;gCtx.fillRect(0,0,W,H);
@@ -1334,9 +1377,9 @@ GAMES.space={
 
     if(this.freeze>0){
       gCtx.fillStyle=`rgba(6,182,212,${Math.sin(this.gameTime*0.1)*0.3+0.4})`;
-      gCtx.fillRect(0,0,gameCanvas.width,gameCanvas.height);
+      gCtx.fillRect(0,0,gameW,gameH);
       gCtx.font='bold 32px Orbitron,monospace';gCtx.fillStyle='#06B6D4';gCtx.textAlign='center';
-      gCtx.fillText('❄️ FROZEN ❄️',gameCanvas.width/2,gameCanvas.height/2);
+      gCtx.fillText('❄️ FROZEN ❄️',gameW/2,gameH/2);
     }
 
     this.powerups.forEach(pu=>{
@@ -1399,7 +1442,7 @@ GAMES.flappy = {
   waitingForStart: true, // Prevents instant falling
 
   start() {
-    const W = gameCanvas.width, H = gameCanvas.height;
+    const W = gameW, H = gameH;
     // Reset all variables
     this.bird = { x: W * 0.22, y: H / 2, vy: 0, r: 14, rot: 0 };
     this.pipes = []; this.score = 0; this.started = false; this.dead = false; 
@@ -1453,7 +1496,7 @@ GAMES.flappy = {
   },
 
   spawnPowerUp(type) {
-    const W = gameCanvas.width, H = gameCanvas.height;
+    const W = gameW, H = gameH;
     const validTypes = ['heart', 'shield', 'electric'];
     const pType = validTypes.includes(type) ? type : validTypes[Math.floor(Math.random() * validTypes.length)];
     const randPipe = this.pipes[Math.floor(Math.random() * Math.min(3, this.pipes.length))];
@@ -1486,7 +1529,7 @@ GAMES.flappy = {
   },
 
   updateGame() {
-    const W = gameCanvas.width, H = gameCanvas.height, b = this.bird;
+    const W = gameW, H = gameH, b = this.bird;
     if (!this.started) return;
 
     // The "Waiting" Logic - keeps game frozen until first flap
@@ -1600,7 +1643,7 @@ GAMES.flappy = {
     gameLoop=requestAnimationFrame(()=>this.loop());
   },
   draw(){
-    const W=gameCanvas.width,H=gameCanvas.height,b=this.bird;
+    const W=gameW,H=gameH,b=this.bird;
     const sky=gCtx.createLinearGradient(0,0,0,H);sky.addColorStop(0,'#0a4d7a');sky.addColorStop(0.5,'#1a8ab5');sky.addColorStop(1,'#0e6e9e');
     gCtx.fillStyle=sky;gCtx.fillRect(0,0,W,H);
     gCtx.fillStyle='rgba(255,255,255,.12)';
@@ -1683,7 +1726,7 @@ GAMES.flappy = {
 GAMES.asteroid={
   player:null,asteroids:[],particles:[],score:0,lives:3,frameCount:0,stars:[],
   start(){
-    const W=gameCanvas.width,H=gameCanvas.height;
+    const W=gameW,H=gameH;
     this.player={x:W/2,y:H-80,r:14,speed:4.5,invincible:0,trail:[]};
     this.asteroids=[];this.particles=[];this.score=0;this.lives=3;this.frameCount=0;
     this.stars=Array.from({length:100},()=>({x:Math.random()*W,y:Math.random()*H,s:Math.random()*2+.3,v:Math.random()*1.5+.5,twinkle:Math.random()}));
@@ -1692,7 +1735,7 @@ GAMES.asteroid={
   },
   loop(){if(!gameRunning)return;if(!gamePaused)this.update();this.draw();gameLoop=requestAnimationFrame(()=>this.loop())},
   update(){
-    const W=gameCanvas.width,H=gameCanvas.height,p=this.player;
+    const W=gameW,H=gameH,p=this.player;
     this.frameCount++;const speed=Math.min(2+this.frameCount/800,5.5);
     if(keys['ArrowLeft']||keys['a']||keys['A'])p.x-=p.speed;
     if(keys['ArrowRight']||keys['d']||keys['D'])p.x+=p.speed;
@@ -1728,7 +1771,7 @@ GAMES.asteroid={
     this.particles=this.particles.filter(pt=>{pt.x+=pt.vx;pt.y+=pt.vy;pt.life--;pt.vx*=.92;pt.vy*=.92;return pt.life>0});
   },
   draw(){
-    const W=gameCanvas.width,H=gameCanvas.height,p=this.player;
+    const W=gameW,H=gameH,p=this.player;
     gCtx.fillStyle='#050510';gCtx.fillRect(0,0,W,H);
     this.stars.forEach(s=>{const a=.3+Math.sin(s.twinkle*Math.PI*2)*.2;gCtx.fillStyle=`rgba(200,200,255,${a})`;gCtx.beginPath();gCtx.arc(s.x,s.y,s.s,0,Math.PI*2);gCtx.fill()});
     p.trail.forEach((t,i)=>{const a=i/p.trail.length*.5;gCtx.shadowColor='#A855F7';gCtx.shadowBlur=14;gCtx.fillStyle=`rgba(168,85,247,${a})`;gCtx.beginPath();gCtx.arc(t.x,t.y,p.r*(i/p.trail.length),0,Math.PI*2);gCtx.fill();gCtx.shadowBlur=0});
@@ -1801,7 +1844,7 @@ GAMES.whack={
   },
   loop(){if(!gameRunning)return;if(!gamePaused)this.update();this.draw();gameLoop=requestAnimationFrame(()=>this.loop())},
   update(){
-    const W=gameCanvas.width,H=gameCanvas.height;
+    const W=gameW,H=gameH;
     const cols=3,rows=3,pw=Math.min(W,500),ph=Math.min(H-40,400);
     const ox=(W-pw)/2,oy=(H-ph)/2+20,cw=pw/cols,ch=ph/rows;
     this.holes.forEach((h,i)=>{
@@ -1820,7 +1863,7 @@ GAMES.whack={
     });
   },
   draw(){
-    const W=gameCanvas.width,H=gameCanvas.height;
+    const W=gameW,H=gameH;
     const bg=gCtx.createLinearGradient(0,0,0,H);bg.addColorStop(0,'#1a5a0f');bg.addColorStop(0.5,'#2d8a22');bg.addColorStop(1,'#1a5a0f');
     gCtx.fillStyle=bg;gCtx.fillRect(0,0,W,H);
     this.holes.forEach(h=>{
@@ -1891,7 +1934,7 @@ GAMES.dino=(function(){
   function rr(ctx,x,y,w,h,r){ctx.beginPath();ctx.moveTo(x+r,y);ctx.lineTo(x+w-r,y);ctx.arcTo(x+w,y,x+w,y+r,r);ctx.lineTo(x+w,y+h-r);ctx.arcTo(x+w,y+h,x+w-r,y+h,r);ctx.lineTo(x+r,y+h);ctx.arcTo(x,y+h,x,y+h-r,r);ctx.lineTo(x,y+r);ctx.arcTo(x,y,x+r,y,r);ctx.closePath();}
 
   function reset(){
-    W=gameCanvas.width; H=gameCanvas.height;
+    W=gameW; H=gameH;
     groundY=H-getGroundOffset();
     hiScore=STATE.bestScores?.dino||0;
     score=0; frameCount=0; gameSpeed=5; maxSpeed=15;
@@ -2251,7 +2294,7 @@ GAMES.dino=(function(){
   // --- draw ---
   function draw(){
     const ctx=gCtx;
-    W=gameCanvas.width;H=gameCanvas.height;
+    W=gameW;H=gameH;
     groundY=H-getGroundOffset();
 
     ctx.save();
@@ -2399,7 +2442,7 @@ GAMES.dino=(function(){
 gameCanvas.addEventListener('click',e=>{
   if(currentGame==='whack'&&gameRunning&&!gamePaused){
     const r=gameCanvas.getBoundingClientRect();
-    const sx=gameCanvas.width/r.width,sy=gameCanvas.height/r.height;
+    const sx=gameW/r.width,sy=gameH/r.height;
     GAMES.whack.click((e.clientX-r.left)*sx,(e.clientY-r.top)*sy);
   }
 });
@@ -2407,7 +2450,7 @@ gameCanvas.addEventListener('touchstart',e=>{
   if(currentGame==='whack'&&gameRunning&&!gamePaused){
     e.preventDefault();
     const r=gameCanvas.getBoundingClientRect(),t=e.touches[0];
-    const sx=gameCanvas.width/r.width,sy=gameCanvas.height/r.height;
+    const sx=gameW/r.width,sy=gameH/r.height;
     GAMES.whack.click((t.clientX-r.left)*sx,(t.clientY-r.top)*sy);
   }
 },{passive:false});
@@ -2439,16 +2482,34 @@ gameCanvas.addEventListener('touchstart',e=>{
 
 // ===== TWEMOJI AUTO-PARSE =====
 function parseEmoji(el){if(typeof twemoji!=='undefined')twemoji.parse(el||document.body,{folder:'svg',ext:'.svg'});}
-// MutationObserver: auto-parse any newly added DOM nodes
+// MutationObserver: parse only the nodes that changed instead of re-scanning the whole page
 (function(){
+  const OBSERVE={childList:true,subtree:true,characterData:true};
+  const pending=new Set();
   let parseTimer=null;
-  const observer=new MutationObserver(()=>{
-    if(parseTimer)clearTimeout(parseTimer);
-    parseTimer=setTimeout(()=>parseEmoji(document.body),50);
+  // Plain ASCII text (scores, timers, "+10" popups) cannot contain emoji, so it is skipped
+  const mayHaveEmoji=el=>/[^\x00-\x7F]/.test(el.textContent);
+  const observer=new MutationObserver(records=>{
+    records.forEach(r=>{
+      if(r.type==='characterData'){if(r.target.parentElement)pending.add(r.target.parentElement);return}
+      r.addedNodes.forEach(n=>pending.add(n.nodeType===Node.ELEMENT_NODE?n:r.target));
+    });
+    if(pending.size&&!parseTimer)parseTimer=setTimeout(flush,50);
   });
-  observer.observe(document.body,{childList:true,subtree:true,characterData:true});
-  // Initial parse
-  if(document.readyState==='loading'){document.addEventListener('DOMContentLoaded',()=>parseEmoji())}else{parseEmoji()}
+  function flush(){
+    parseTimer=null;
+    const targets=[...pending].filter(el=>el.isConnected&&mayHaveEmoji(el));
+    pending.clear();
+    if(!targets.length)return;
+    // twemoji swaps text for <img> tags; stop observing meanwhile so that does not schedule another parse
+    observer.disconnect();
+    targets.forEach(el=>parseEmoji(el));
+    observer.observe(document.body,OBSERVE);
+  }
+  observer.observe(document.body,OBSERVE);
+  // Initial parse of the whole page
+  const parseAll=()=>{observer.disconnect();parseEmoji();observer.observe(document.body,OBSERVE)};
+  if(document.readyState==='loading'){document.addEventListener('DOMContentLoaded',parseAll)}else{parseAll()}
 })();
 
 // ===== SPIN TO PLAY WHEEL =====
@@ -2627,10 +2688,12 @@ const SPIN_WHEEL = {
   },
   
   showResult() {
-    // Calculate which game was selected
+    // Calculate which slice sits under the pointer. Slices start at angle 0 (east) in
+    // wheel space; the pointer is at the top (-PI/2) on screen, i.e. -PI/2 - rotation in wheel space.
     const sliceAngle = (Math.PI * 2) / this.games.length;
-    const normalizedRotation = (this.currentRotation % (Math.PI * 2) + Math.PI * 2) % (Math.PI * 2);
-    const selectedIndex = Math.floor(((Math.PI * 2) - normalizedRotation) / sliceAngle) % this.games.length;
+    const POINTER_ANGLE = -Math.PI / 2;
+    const pointerInWheel = ((POINTER_ANGLE - this.currentRotation) % (Math.PI * 2) + Math.PI * 2) % (Math.PI * 2);
+    const selectedIndex = Math.floor(pointerInWheel / sliceAngle) % this.games.length;
     
     this.selectedGame = selectedIndex;
     const game = this.games[selectedIndex];
@@ -2676,7 +2739,7 @@ GAMES.zombie = {
   score: 0, lives: 3, gameTime: 0, player: null, bullets: [], zombies: [], particles: [], lastShot: 0,
 
   start() {
-    const W = gameCanvas.width, H = gameCanvas.height;
+    const W = gameW, H = gameH;
     this.score = 0; this.lives = 3; this.gameTime = 0;
     this.bullets = []; this.zombies = []; this.particles = [];
     this.player = { x: W/2, y: H/2, w: 32, h: 32, vx: 0, vy: 0, speed: 4 };
@@ -2696,14 +2759,12 @@ GAMES.zombie = {
   shoot(e) {
     if(!gameRunning || gamePaused) return;
     e.preventDefault();
-    const W = gameCanvas.width, H = gameCanvas.height;
+    const W = gameW, H = gameH;
     const rect = gameCanvas.getBoundingClientRect();
-    let cx, cy;
-    if(e.touches && e.touches.length > 0) {
-      cx = e.touches[0].clientX - rect.left; cy = e.touches[0].clientY - rect.top;
-    } else {
-      cx = e.clientX - rect.left; cy = e.clientY - rect.top;
-    }
+    // map the pointer from on-screen pixels to game coordinates (they differ after a resize)
+    const sx = W / rect.width, sy = H / rect.height;
+    const pt = (e.touches && e.touches.length > 0) ? e.touches[0] : e;
+    const cx = (pt.clientX - rect.left) * sx, cy = (pt.clientY - rect.top) * sy;
     const dx = cx - (this.player.x + 16);
     const dy = cy - (this.player.y + 16);
     const dist = Math.sqrt(dx*dx + dy*dy);
@@ -2713,7 +2774,7 @@ GAMES.zombie = {
   },
 
   spawnZombie() {
-    const W = gameCanvas.width, H = gameCanvas.height;
+    const W = gameW, H = gameH;
     let x, y;
     if(Math.random() < 0.5) {
       x = Math.random() < 0.5 ? -30 : W + 30;
@@ -2733,7 +2794,7 @@ GAMES.zombie = {
   },
 
   update() {
-    const W = gameCanvas.width, H = gameCanvas.height, p = this.player;
+    const W = gameW, H = gameH, p = this.player;
     this.gameTime++;
 
     let dx = 0, dy = 0;
@@ -2751,17 +2812,21 @@ GAMES.zombie = {
       this.spawnZombie();
     }
 
-    this.bullets.forEach((b, i) => {
+    // iterate backwards so splicing does not skip the next element
+    for(let i = this.bullets.length - 1; i >= 0; i--) {
+      const b = this.bullets[i];
       b.x += b.vx; b.y += b.vy;
       if(b.x < 0 || b.x > W || b.y < 0 || b.y > H) this.bullets.splice(i, 1);
-    });
+    }
 
-    this.particles.forEach((pt, i) => {
+    for(let i = this.particles.length - 1; i >= 0; i--) {
+      const pt = this.particles[i];
       pt.x += pt.vx; pt.y += pt.vy; pt.life -= 0.05;
       if(pt.life <= 0) this.particles.splice(i, 1);
-    });
+    }
 
-    this.zombies.forEach((z, i) => {
+    for(let i = this.zombies.length - 1; i >= 0; i--) {
+      const z = this.zombies[i];
       const zdx = (p.x + 16) - (z.x + 16);
       const zdy = (p.y + 16) - (z.y + 16);
       const dist = Math.sqrt(zdx*zdx + zdy*zdy);
@@ -2772,9 +2837,9 @@ GAMES.zombie = {
         this.lives--; setLives(this.lives); SFX.hit(); screenShake();
         this.zombies.splice(i, 1);
         this.spawnParticles(p.x+16, p.y+16, '#ff0000');
-        if(this.lives <= 0) { this.stop(); endGame(this.score, 'zombie'); }
+        if(this.lives <= 0) { this.stop(); endGame(this.score, 'zombie'); return; }
       }
-    });
+    }
 
     // bullets hit zombies
     for(let i = this.bullets.length - 1; i >= 0; i--) {
@@ -2799,12 +2864,12 @@ GAMES.zombie = {
   },
 
   draw() {
-    gCtx.fillStyle = '#111'; gCtx.fillRect(0, 0, gameCanvas.width, gameCanvas.height);
+    gCtx.fillStyle = '#111'; gCtx.fillRect(0, 0, gameW, gameH);
     
     // Grid lines for zombie mode
     gCtx.strokeStyle = '#222'; gCtx.lineWidth = 2;
-    for(let x=0; x<gameCanvas.width; x+=50) { gCtx.beginPath(); gCtx.moveTo(x,0); gCtx.lineTo(x,gameCanvas.height); gCtx.stroke(); }
-    for(let y=0; y<gameCanvas.height; y+=50) { gCtx.beginPath(); gCtx.moveTo(0,y); gCtx.lineTo(gameCanvas.width,y); gCtx.stroke(); }
+    for(let x=0; x<gameW; x+=50) { gCtx.beginPath(); gCtx.moveTo(x,0); gCtx.lineTo(x,gameH); gCtx.stroke(); }
+    for(let y=0; y<gameH; y+=50) { gCtx.beginPath(); gCtx.moveTo(0,y); gCtx.lineTo(gameW,y); gCtx.stroke(); }
 
     const p = this.player;
     const cx = p.x + p.w / 2, cy = p.y + p.h / 2;
@@ -2847,7 +2912,7 @@ GAMES.zombie = {
     // Bottom-left decorations for Zombie Shooter
     gCtx.save();
     gCtx.font='45px serif';gCtx.textAlign='left';gCtx.globalAlpha=0.5;
-    gCtx.fillText('🪨 🪨',20,gameCanvas.height-20);
+    gCtx.fillText('🪨 🪨',20,gameH-20);
     gCtx.globalAlpha=1;gCtx.restore();
   },
 
@@ -2949,11 +3014,11 @@ GAMES.snake = {
   spawnFood(){
 
     const cols = Math.floor(
-      gameCanvas.width / this.gridSize
+      gameW / this.gridSize
     );
 
     const rows = Math.floor(
-      gameCanvas.height / this.gridSize
+      gameH / this.gridSize
     );
 
     this.food = {
@@ -2979,11 +3044,11 @@ GAMES.snake = {
     if(this.direction === 'RIGHT') head.x++;
 
     const cols = Math.floor(
-      gameCanvas.width / this.gridSize
+      gameW / this.gridSize
     );
 
     const rows = Math.floor(
-      gameCanvas.height / this.gridSize
+      gameH / this.gridSize
     );
 
     // Wall collision
@@ -3042,8 +3107,8 @@ GAMES.snake = {
     ctx.fillRect(
       0,
       0,
-      gameCanvas.width,
-      gameCanvas.height
+      gameW,
+      gameH
     );
 
     // Food
@@ -3082,7 +3147,7 @@ GAMES.snake = {
     ctx.fillText(
       '🐍',
       20,
-      gameCanvas.height-20
+      gameH-20
     );
 
     ctx.restore();
@@ -3116,11 +3181,16 @@ function filterGames() {
     let visibleCount = 0;
 
     gameCards.forEach(card => {
-        const gameName = card.querySelector('.game-name').textContent.toLowerCase();
         const gameCategory = card.dataset.category || 'all';
+        // Search the name, the description and the category, not just the title
+        const searchable = [
+            card.querySelector('.game-name')?.textContent,
+            card.querySelector('.game-desc')?.textContent,
+            gameCategory
+        ].join(' ').toLowerCase();
 
         // Check if it matches Search AND Filter
-        const matchesSearch = gameName.includes(searchTerm);
+        const matchesSearch = searchable.includes(searchTerm);
         const matchesFilter = (activeFilter === 'all' || gameCategory === activeFilter);
 
         if (matchesSearch && matchesFilter) {
@@ -3132,6 +3202,12 @@ function filterGames() {
     });
 
     if (visibleCount === 0) {
+        // A category with no games at all (e.g. Multiplayer) is not a failed search
+        const categoryEmpty = activeFilter !== 'all' &&
+            ![...gameCards].some(card => card.dataset.category === activeFilter);
+        noResults.querySelector('p').textContent = categoryEmpty
+            ? `No ${activeFilter} games yet. Stay tuned, more are coming!`
+            : 'No games found matching your search!';
         noResults.classList.remove('hidden');
     } else {
         noResults.classList.add('hidden');

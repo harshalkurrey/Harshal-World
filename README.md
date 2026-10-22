@@ -33,6 +33,18 @@ Harshal World is a lightweight frontend project designed to demonstrate core web
 
 ## 🚀 How to Run Locally
 
-```bash
-git clone https://github.com/harshalkurrey/Harshal-World.git
-cd Harshal-World
+1. Clone the repository:
+
+   ```bash
+   git clone https://github.com/harshalkurrey/Harshal-World.git
+   ```
+
+2. Navigate to the project folder:
+
+   ```bash
+   cd Harshal-World
+   ```
+
+3. Open `index.html` in your web browser to start playing.
+
+No additional installation is required for the basic frontend setup.

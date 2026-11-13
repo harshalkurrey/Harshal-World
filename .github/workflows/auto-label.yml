@@ -1,18 +1,22 @@
+
 name: Auto Label NSOC Issues
 
 on:
   issues:
-    types: [opened]
+    types:
+      - opened
 
 permissions:
   issues: write
 
 jobs:
   add-label:
+    name: Automatically Add NSOC Label
     runs-on: ubuntu-latest
+
     steps:
-      - name: Add label if NSOC keyword found
-        uses: actions-ecosystem/action-add-labels@v1
+      - name: Add NSOC label if keyword is found
         if: contains(github.event.issue.title, 'NSOC') || contains(github.event.issue.body, 'NSOC')
+        uses: actions-ecosystem/action-add-labels@v1
         with:
-          labels: NSOC '26
+          labels: "NSOC '26"
